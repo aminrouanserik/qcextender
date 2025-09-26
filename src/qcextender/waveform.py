@@ -10,7 +10,13 @@ class Waveform:
     """Base waveform class with which all calculations can be done, stores multi-modal (time domain) waves."""
 
     def __init__(self, strain: np.ndarray, time: np.ndarray, metadata: dict) -> None:
-        """Agnostic class initializer, can supplement with any additional model."""
+        """Initializes class containing waveform data.
+
+        Args:
+            strain (np.ndarray): Stacked array of multi-modal wave strains.
+            time (np.ndarray): Time array, should be the same length as component strain arrays.
+            metadata (dict): Metadata belonging to the generated or requested waveform.
+        """
         self.strain = strain
         self.time = time
         self.metadata = metadata
@@ -38,46 +44,97 @@ class Waveform:
             hp, hc = get_td_waveform(**local_kwargs)
             single_mode_strain.append(np.asarray(hp - 1j * hc))
 
-        multi_mode_strain = cls._dimensionless(
+        multi_mode_strain = cls._dimensionless_strain(
             np.vstack(single_mode_strain),
             kwargs["mass1"] + kwargs["mass2"],
             kwargs["distance"],
         )
+        time = cls._dimensionless_time(
+            hp.sample_times, kwargs["mass1"] + kwargs["mass2"]
+        )
 
         return cls(
             multi_mode_strain,
-            hp.sample_times * (lal.C_SI * lal.MTSUN_SI),
+            time,
             kwargs,
         )
 
     @classmethod
     def from_sim(cls, name: str, modes: Iterable[Sequence[int]]) -> Self:
-        """Loads multi-modal data from a specified SXS simulation."""
-        sim = sxs.load(name)
+        """Loads multi-modal data from a specified SXS simulation.
+
+        Args:
+            name (str): Name of the simulation as in the SXS catalogue.
+            modes (Iterable[Sequence[int]]): Modes to be included.
+
+        Raises:
+            ValueError: A specified mode in modes is not available.
+
+        Returns:
+            Self: Object with stacked modes as complex array.
+        """
+        sim = sxs.load(name, extrapolation="Outer")
         metadata = sim.metadata
         metadata["modes"] = modes
 
         single_mode_strain = []
-        sim = sim.h
         for l, m in modes:
             try:
-                single_mode_strain.append(np.array(sim[:, sim.index(l, m)]))
+                single_mode_strain.append(np.array(sim.h[:, sim.h.index(l, m)]))
             except:
                 raise ValueError(f"Mode (l={l}, m={m}) not found in this simulation.")
 
+        time = cls._align(np.array(sim.h[:, sim.h.index(l, m)]), sim.h.t)
         multi_mode_strain = np.vstack(single_mode_strain)
-        return cls(multi_mode_strain, sim.t, metadata)
 
-    # Still a small factor off for some reason
+        return cls(multi_mode_strain, time, metadata)
+
+    # Spherical harmonics should be moved to a function that takes l, m, inclination and coa_phase.
     @staticmethod
-    def _dimensionless(
+    def _dimensionless_strain(
         strain: np.ndarray, mass: Number, distance: Number
     ) -> np.ndarray:
-        C = lal.C_SI
-        MT = lal.MTSUN_SI
-        PC = lal.PC_SI
-        correction = mass * MT * C / (distance * 1e6 * PC)
+        """Converts the strain into a dimensionless strain. Currently includes spherical harmonics.
+
+        Args:
+            strain (np.ndarray): N-dimensional array containing dimensioned strains.
+            mass (Number): Total mass in solar masses
+            distance (Number): Distance in Mpc.
+
+        Returns:
+            np.ndarray: Dimensionless wave strain.
+        """
+        distance *= 1e6 * lal.PC_SI
+        y22 = np.sqrt(5.0 / (64 * np.pi)) * ((1 + np.cos(0)) ** 2) * np.exp(2 * 0 * 1j)
+        correction = mass * lal.MTSUN_SI * lal.C_SI / distance * y22
         return strain / correction
+
+    @staticmethod
+    def _dimensionless_time(time: np.ndarray, mass: Number) -> np.ndarray:
+        """Converts time from units of seconds to geometric units.
+
+        Args:
+            time (np.ndarray): Time in seconds.
+            mass (Number): Mass in solar masses.
+
+        Returns:
+            np.ndarray: New time in geometric units.
+        """
+        return time / (lal.MTSUN_SI * mass)
+
+    @staticmethod
+    def _align(strain: np.ndarray, time: np.ndarray) -> np.ndarray:
+        """Aligns waveform such that the dominant order peak is at t=0.
+
+        Args:
+            strain (np.ndarray): Waveform strain data.
+            time (np.ndarray): Time array prior to realigning.
+
+        Returns:
+            np.ndarray: New time array.
+        """
+        time -= time[np.argmax(strain)]
+        return time
 
     def singlemode(self, l: int = 2, m: int = 2) -> np.ndarray:
         """Returns the single mode wave strain. Defaults to the dominant mode.

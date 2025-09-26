@@ -15,7 +15,6 @@ phenom = Waveform.from_model("IMRPhenomD", [(2, 2), (3, 3)], **kwargs)
 seob = Waveform.from_model("SEOBNRv4", [(2, 2)], **kwargs)
 
 sim = Waveform.from_sim("SXS:BBH:3977", [(2, 2)])
-print(sim.metadata)
 
 plt.plot(phenom.time, phenom.singlemode(2, 2))
 plt.plot(seob.time, seob.singlemode())
