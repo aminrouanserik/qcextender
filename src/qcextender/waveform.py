@@ -1,6 +1,9 @@
 from typing import Iterable, Sequence, Self
+from numbers import Number
 import numpy as np
 from pycbc.waveform import get_td_waveform
+import sxs
+import lal
 
 
 class Waveform:
@@ -11,11 +14,6 @@ class Waveform:
         self.strain = strain
         self.time = time
         self.metadata = metadata
-
-    @classmethod
-    def from_sim(cls, name: str, modes: Iterable[Sequence[int]]) -> None:
-        """Loads multi-modal data from a simulation."""
-        pass
 
     @classmethod
     def from_model(
@@ -38,10 +36,48 @@ class Waveform:
             local_kwargs = kwargs.copy()
             local_kwargs["mode_array"] = mode
             hp, hc = get_td_waveform(**local_kwargs)
-            single_mode_strain.append(np.asarray(hp + 1j * hc))
+            single_mode_strain.append(np.asarray(hp - 1j * hc))
+
+        multi_mode_strain = cls._dimensionless(
+            np.vstack(single_mode_strain),
+            kwargs["mass1"] + kwargs["mass2"],
+            kwargs["distance"],
+        )
+
+        return cls(
+            multi_mode_strain,
+            hp.sample_times * (lal.C_SI * lal.MTSUN_SI),
+            kwargs,
+        )
+
+    @classmethod
+    def from_sim(cls, name: str, modes: Iterable[Sequence[int]]) -> Self:
+        """Loads multi-modal data from a specified SXS simulation."""
+        sim = sxs.load(name)
+        metadata = sim.metadata
+        metadata["modes"] = modes
+
+        single_mode_strain = []
+        sim = sim.h
+        for l, m in modes:
+            try:
+                single_mode_strain.append(np.array(sim[:, sim.index(l, m)]))
+            except:
+                raise ValueError(f"Mode (l={l}, m={m}) not found in this simulation.")
 
         multi_mode_strain = np.vstack(single_mode_strain)
-        return cls(multi_mode_strain, hp.sample_times, kwargs)
+        return cls(multi_mode_strain, sim.t, metadata)
+
+    # Still a small factor off for some reason
+    @staticmethod
+    def _dimensionless(
+        strain: np.ndarray, mass: Number, distance: Number
+    ) -> np.ndarray:
+        C = lal.C_SI
+        MT = lal.MTSUN_SI
+        PC = lal.PC_SI
+        correction = mass * MT * C / (distance * 1e6 * PC)
+        return strain / correction
 
     def singlemode(self, l: int = 2, m: int = 2) -> np.ndarray:
         """Returns the single mode wave strain. Defaults to the dominant mode.

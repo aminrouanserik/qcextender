@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "pycbc>=2.9.0",
+    "sxs>=2025.0.12",
 ]
 
 [project.scripts]
