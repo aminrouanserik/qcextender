@@ -12,9 +12,11 @@ kwargs = {
     "f_lower": 40,
 }
 
-phenom = Waveform.from_model("IMRPhenomD", [(2, 2)], **kwargs)
+phenom = Waveform.from_model("IMRPhenomD", [(2, 2), (3, 3)], **kwargs)
 seob = Waveform.from_model("SEOBNRv4", [(2, 2)], **kwargs)
 
-plt.plot(phenom.time, phenom.data)
-plt.plot(seob.time, seob.data)
+print(type(phenom))
+
+plt.plot(phenom.time, phenom.singlemode(3, 3))
+plt.plot(seob.time, seob.singlemode())
 plt.show()
