@@ -16,6 +16,10 @@ seob = Waveform.from_model("SEOBNRv4", [(2, 2)], **kwargs)
 
 sim = Waveform.from_sim("SXS:BBH:3977", [(2, 2)])
 
+print(phenom.metadata)
+print(seob.metadata)
+print(sim.metadata)
+
 plt.plot(phenom.time, phenom[3, 3])
 plt.plot(seob.time, seob[2, 2])
 plt.plot(sim.time, sim[2, 2])

@@ -1,15 +1,51 @@
-from typing import Iterable, Sequence, Self
+from typing import Iterable, Sequence, Self, Optional
 from numbers import Number
 import numpy as np
 from pycbc.waveform import get_td_waveform, waveform_modes
 import sxs
 import lal
+from dataclasses import dataclass, field, fields, asdict
+
+
+@dataclass
+class Metadata:
+
+    library: str
+    q: float
+
+    approximant: Optional[str] = None
+    simulation_id: Optional[str] = None
+
+    total_mass: Optional[float] = None
+    spin1: tuple[float, float, float] = (0, 0, 0)
+    spin2: tuple[float, float, float] = (0, 0, 0)
+    eccentricity: float = 0
+    distance: Optional[float] = None
+    inclination: float = 0
+    coa_phase: float = 0
+
+    delta_t: Optional[float] = 1.0 / 4096
+    f_lower: float = 20
+    # f_final: Optional[float] = None
+
+    modes: Iterable[tuple[int, int]] = field(default_factory=list)
+    domain: str = "time"
+    dimensionless: bool = True
+    aligned_to_peak: bool = True
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def to_dict(self):
+        return asdict(self)
 
 
 class Waveform:
     """Base waveform class with which all calculations can be done, stores multi-modal (time domain) waveforms."""
 
-    def __init__(self, strain: np.ndarray, time: np.ndarray, metadata: dict) -> None:
+    def __init__(
+        self, strain: np.ndarray, time: np.ndarray, metadata: Metadata
+    ) -> None:
         """Initializes class containing waveform data.
 
         Args:
@@ -34,10 +70,20 @@ class Waveform:
         Returns:
             Waveform: Object with stacked modes as complex array.
         """
-        single_mode_strain = []
-        kwargs["approximant"] = approximant
-        kwargs["modes"] = modes
+        total_mass = kwargs["mass1"] + kwargs["mass2"]
 
+        q = kwargs["mass1"] / kwargs["mass2"]
+        if q < 1:
+            q = 1 / q
+
+        kwargs.update(
+            library="PyCBC",
+            q=q,
+            approximant=approximant,
+            modes=list(modes),
+        )
+
+        single_mode_strain = []
         for mode in modes:
             local_kwargs = kwargs.copy()
             local_kwargs["mode_array"] = mode
@@ -46,21 +92,21 @@ class Waveform:
 
         multi_mode_strain = cls._dimensionless_strain(
             np.vstack(single_mode_strain),
-            kwargs["mass1"] + kwargs["mass2"],
+            total_mass,
             kwargs["distance"],
         )
-        time = cls._dimensionless_time(
-            hp.sample_times, kwargs["mass1"] + kwargs["mass2"]
-        )
+        kwargs["distance"] = None
+        time = cls._dimensionless_time(hp.sample_times, total_mass)
+        metadata = cls._kwargs_to_metadata(kwargs)
 
         return cls(
             multi_mode_strain,
             time,
-            kwargs,
+            metadata,
         )
 
     @classmethod
-    def from_sim(cls, name: str, modes: Iterable[Sequence[int]]) -> Self:
+    def from_sim(cls, sim_id: str, modes: Iterable[Sequence[int]]) -> Self:
         """Loads multi-modal data from a specified SXS simulation.
 
         Args:
@@ -73,9 +119,20 @@ class Waveform:
         Returns:
             Self: Object with stacked modes as complex array.
         """
-        sim = sxs.load(name, extrapolation="Outer")
-        metadata = sim.metadata
-        metadata["modes"] = modes
+        sim = sxs.load(sim_id, extrapolation="Outer")
+        meta = sim.metadata
+        meta["modes"] = modes
+
+        q = meta["initial_mass1"] / meta["initial_mass2"]
+        if q < 1:
+            q = 1 / q
+
+        meta.update(
+            library="SXS",
+            simulation_id=sim_id,
+            q=q,
+            modes=list(modes),
+        )
 
         single_mode_strain = []
         for l, m in modes:
@@ -91,7 +148,7 @@ class Waveform:
 
         time = cls._align(np.array(sim.h[:, sim.h.index(l, m)]), sim.h.t)
         multi_mode_strain = np.vstack(single_mode_strain)
-
+        metadata = cls._kwargs_to_metadata(meta)
         return cls(multi_mode_strain, time, metadata)
 
     @staticmethod
@@ -154,6 +211,38 @@ class Waveform:
         """
         return waveform_modes.get_glm(l, m, iota) * np.exp(1j * m * phi)
 
+    @staticmethod
+    def _kwargs_to_metadata(kwargs: dict[str, type]) -> "Metadata":
+        """Converts SXS metadata or user supplied kwargs into a uniform Metadata object. Will be split for SXS and PyCBC later.
+
+        Args:
+            kwargs (dict[str, type]): Keyword arguments used to generate waveform or SXS simulation metadata.
+
+        Returns:
+            Metadata: Unified object encoding all important metadata.
+        """
+        meta_fields = {f.name for f in fields(Metadata)}
+
+        kwargs["total_mass"] = None
+        kwargs["distance"] = None
+
+        aliases = {
+            "reference_dimensionless_spin1": "spin1",
+            "reference_dimensionless_spin2": "spin2",
+            "reference_eccentricity": "eccentricity",
+        }
+
+        fixed_kwargs = {}
+        for k, v in kwargs.items():
+            k = aliases.get(k, k)
+            if k in meta_fields:
+                if k in ("spin1", "spin2") and v is not None:
+                    fixed_kwargs[k] = tuple(v)  # normalize to tuple
+                else:
+                    fixed_kwargs[k] = v
+
+        return Metadata(**fixed_kwargs)
+
     def __getitem__(self, mode: tuple[int, int]) -> np.ndarray:
         """Returns the single mode wave strain.
 
@@ -167,7 +256,7 @@ class Waveform:
             np.ndarray: Single mode wave strain.
         """
 
-        modes = self.metadata.get("modes", [])
+        modes = self.metadata["modes"]
         try:
             index = modes.index((mode[0], mode[1]))
         except ValueError:
