@@ -2,6 +2,9 @@ from typing import Iterable, Sequence, Self, Optional
 from numbers import Number
 import numpy as np
 from pycbc.waveform import get_td_waveform, waveform_modes
+from pycbc.types import timeseries as ts
+from pycbc.filter.matchedfilter import match as cbcmatch
+from pycbc.psd import aLIGOZeroDetHighPower
 import sxs
 import lal
 from dataclasses import dataclass, field, fields, asdict
@@ -262,3 +265,35 @@ class Waveform:
         except ValueError:
             raise ValueError(f"Mode {mode} not found in this waveform.")
         return self.strain[index]
+
+    def match(
+        self,
+        waveform: Self,
+        f_lower: float | None = None,
+        psd: str = "aLIGOZeroDetHighPower",
+    ) -> float:
+        """Calculates the match between self and one other waveform. Note, only the real parts are used.
+
+        Args:
+            waveform (Self): A waveform to match with.
+            f_lower (float | None, optional): Lower cut-off for the match. Defaults to None, which then takes the highest of the two waveforms from the metadata.
+            psd (str, optional): The PSD to use in the match. Defaults to "aLIGOZeroDetHighPower".
+
+        Returns:
+            float: The real match of the two waveforms.
+        """
+
+        wf1 = ts.TimeSeries(self[2, 2].real, delta_t=self.metadata.delta_t)
+        wf2 = ts.TimeSeries(waveform[2, 2].real, delta_t=waveform.metadata.delta_t)
+
+        if f_lower is None:
+            f_lower = max(self.metadata.f_lower, waveform.metadata.f_lower)
+
+        flen = 1 << (max(len(wf1), len(wf2)) - 1).bit_length()
+        delta_f = 1.0 / (flen * wf1.delta_t)
+
+        psd = aLIGOZeroDetHighPower(flen, delta_f, f_lower)
+        wf1.resize(flen)
+        wf2.resize(flen)
+
+        return cbcmatch(wf1, wf2, psd=psd, low_frequency_cutoff=f_lower)[0]
