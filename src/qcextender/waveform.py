@@ -1,13 +1,13 @@
 from typing import Iterable, Sequence, Self
 from numbers import Number
 import numpy as np
-from pycbc.waveform import get_td_waveform
+from pycbc.waveform import get_td_waveform, waveform_modes
 import sxs
 import lal
 
 
 class Waveform:
-    """Base waveform class with which all calculations can be done, stores multi-modal (time domain) waves."""
+    """Base waveform class with which all calculations can be done, stores multi-modal (time domain) waveforms."""
 
     def __init__(self, strain: np.ndarray, time: np.ndarray, metadata: dict) -> None:
         """Initializes class containing waveform data.
@@ -80,7 +80,12 @@ class Waveform:
         single_mode_strain = []
         for l, m in modes:
             try:
-                single_mode_strain.append(np.array(sim.h[:, sim.h.index(l, m)]))
+                single_mode_strain.append(
+                    np.array(sim.h[:, sim.h.index(l, m)])
+                    * cls._spherical_harmonic(
+                        l, m, 0, np.pi / 2
+                    )  # Shifted to make visual comparisons easier
+                )
             except:
                 raise ValueError(f"Mode (l={l}, m={m}) not found in this simulation.")
 
@@ -89,12 +94,11 @@ class Waveform:
 
         return cls(multi_mode_strain, time, metadata)
 
-    # Spherical harmonics should be moved to a function that takes l, m, inclination and coa_phase.
     @staticmethod
     def _dimensionless_strain(
         strain: np.ndarray, mass: Number, distance: Number
     ) -> np.ndarray:
-        """Converts the strain into a dimensionless strain. Currently includes spherical harmonics.
+        """Converts the strain into a dimensionless strain.
 
         Args:
             strain (np.ndarray): N-dimensional array containing dimensioned strains.
@@ -105,8 +109,7 @@ class Waveform:
             np.ndarray: Dimensionless wave strain.
         """
         distance *= 1e6 * lal.PC_SI
-        y22 = np.sqrt(5.0 / (64 * np.pi)) * ((1 + np.cos(0)) ** 2) * np.exp(2 * 0 * 1j)
-        correction = mass * lal.MTSUN_SI * lal.C_SI / distance * y22
+        correction = mass * lal.MTSUN_SI * lal.C_SI / distance
         return strain / correction
 
     @staticmethod
@@ -133,25 +136,40 @@ class Waveform:
         Returns:
             np.ndarray: New time array.
         """
-        time -= time[np.argmax(strain)]
+        time -= time[np.argmax(np.abs(strain))]
         return time
 
-    def singlemode(self, l: int = 2, m: int = 2) -> np.ndarray:
-        """Returns the single mode wave strain. Defaults to the dominant mode.
+    @staticmethod
+    def _spherical_harmonic(l: Number, m: Number, iota: Number, phi: Number) -> Number:
+        """Calculates the spin-weighted spherical harmonics for any mode.
 
         Args:
-            l (int, optional): Spherical harmonic degree. Defaults to 2.
-            m (int, optional): Spherical harmonic order. Defaults to 2.
+            l (Number): Spherical harmonic degree.
+            m (Number): Spherical harmonic order.
+            iota (Number): The inclination in radians.
+            phi (Number): The coalescence phase.
+
+        Returns:
+            Number: The spin-weighted spherical harmonics at specified order.
+        """
+        return waveform_modes.get_glm(l, m, iota) * np.exp(1j * m * phi)
+
+    def __getitem__(self, mode: tuple[int, int]) -> np.ndarray:
+        """Returns the single mode wave strain.
+
+        Args:
+            mode (tuple[int, int]): Spherical harmonics decomposed strain mode.
 
         Raises:
-            ValueError: The requested mode could not be found.
+            ValueError: This Waveform object does not contain the requested mode.
 
         Returns:
             np.ndarray: Single mode wave strain.
         """
+
         modes = self.metadata.get("modes", [])
         try:
-            index = modes.index((l, m))
+            index = modes.index((mode[0], mode[1]))
         except ValueError:
-            raise ValueError(f"Mode (l={l}, m={m}) not found in this waveform.")
+            raise ValueError(f"Mode {mode} not found in this waveform.")
         return self.strain[index]
