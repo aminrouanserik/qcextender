@@ -1,4 +1,4 @@
-from typing import Iterable, Sequence, Self, Optional
+from typing import Iterable, Sequence, Self
 from numbers import Number
 import numpy as np
 from pycbc.waveform import get_td_waveform, waveform_modes
@@ -7,40 +7,8 @@ from pycbc.filter.matchedfilter import match as cbcmatch
 from pycbc.psd import aLIGOZeroDetHighPower
 import sxs
 import lal
-from dataclasses import dataclass, field, fields, asdict
-
-
-@dataclass
-class Metadata:
-
-    library: str
-    q: float
-
-    approximant: Optional[str] = None
-    simulation_id: Optional[str] = None
-
-    total_mass: Optional[float] = None
-    spin1: tuple[float, float, float] = (0, 0, 0)
-    spin2: tuple[float, float, float] = (0, 0, 0)
-    eccentricity: float = 0
-    distance: Optional[float] = None
-    inclination: float = 0
-    coa_phase: float = 0
-
-    delta_t: Optional[float] = 1.0 / 4096
-    f_lower: float = 20
-    # f_final: Optional[float] = None
-
-    modes: Iterable[tuple[int, int]] = field(default_factory=list)
-    domain: str = "time"
-    dimensionless: bool = True
-    aligned_to_peak: bool = True
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def to_dict(self):
-        return asdict(self)
+from dataclasses import fields
+from qcextender.metadata import Metadata
 
 
 class Waveform:
@@ -98,7 +66,10 @@ class Waveform:
             total_mass,
             kwargs["distance"],
         )
+
+        kwargs["delta_t"] = cls._dimensionless_time(kwargs["delta_t"], total_mass)
         kwargs["distance"] = None
+
         time = cls._dimensionless_time(hp.sample_times, total_mass)
         metadata = cls._kwargs_to_metadata(kwargs)
 
@@ -126,7 +97,7 @@ class Waveform:
         meta = sim.metadata
         meta["modes"] = modes
 
-        q = meta["initial_mass1"] / meta["initial_mass2"]
+        q = meta["initial_mass_ratio"]
         if q < 1:
             q = 1 / q
 
@@ -135,6 +106,7 @@ class Waveform:
             simulation_id=sim_id,
             q=q,
             modes=list(modes),
+            delta_t=sim.h.t[1] - sim.h.t[0],
         )
 
         single_mode_strain = []
