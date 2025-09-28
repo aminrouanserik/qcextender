@@ -233,9 +233,12 @@ class Waveform:
 
         modes = self.metadata["modes"]
         try:
-            index = modes.index((mode[0], mode[1]))
+            index = modes.index((mode[0], abs(mode[1])))
         except ValueError:
             raise ValueError(f"Mode {mode} not found in this waveform.")
+
+        if mode[1] < 0:
+            return (-1) ** mode[0] * np.conj(self.strain[index])
         return self.strain[index]
 
     def match(

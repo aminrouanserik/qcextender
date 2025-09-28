@@ -6,9 +6,9 @@
     - [x] Change print order in __repr__()
     - [ ] Conversion and lock
 1. **Split Waveform objects**
-    - [ ] BaseWaveform containing all common features time-series
-    - [ ] SXS waveform, dimensionless time-series
-    - [ ] Waveform, dimensioned time-series
+    - [ ] BaseWaveform containing all common features, time-series
+    - [ ] SXS waveform, dimensionless, time-series
+    - [ ] Waveform, dimensioned, time-series
 1. **Convert to Waveform**
     - [ ] Add a feature turning SXS Waveforms into Waveforms when specifying mass, distance, etc.
     - [ ] Shift amplitude ***and*** phase
