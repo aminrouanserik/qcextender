@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from qcextender.waveform import Waveform
+from qcextender.dimensionlesswaveform import DimensionlessWaveform
 
 kwargs = {
     "mass1": 10,
@@ -14,15 +15,14 @@ kwargs = {
 phenom = Waveform.from_model("IMRPhenomD", [(2, 2), (3, 3)], **kwargs)
 seob = Waveform.from_model("SEOBNRv4", [(2, 2)], **kwargs)
 
-sim = Waveform.from_sim("SXS:BBH:3977", [(2, 2)])
+# sim = SXSWaveform.from_sim("SXS:BBH:3977")
 
-# print(phenom.match(seob))
-# print(phenom.match(sim))
+print(phenom.match(seob))
 print(phenom.metadata)
 print(seob.metadata)
-print(sim.metadata)
+# print(sim.metadata)
 
-# plt.plot(phenom.time, phenom[3, 3])
-# plt.plot(seob.time, seob[2, 2])
+plt.plot(phenom.time, phenom[3, 3])
+plt.plot(seob.time, seob[2, 2])
 # plt.plot(sim.time, sim[2, 2])
-# plt.show()
+plt.show()

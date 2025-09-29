@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field, asdict, fields
+from dataclasses import dataclass, field, asdict
 from typing import Iterable, Optional
 
 
@@ -34,7 +34,7 @@ class Metadata:
 
     modes: Iterable[tuple[int, int]] = field(default_factory=list)
     # domain: str = "time"
-    dimensionless: bool = True
+    dimensionless: bool = False
     aligned_to_peak: bool = True
 
     _REPR_ORDER = [
