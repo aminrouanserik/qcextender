@@ -1,11 +1,13 @@
 import numpy as np
+import spheroidal
 from qcextender.metadata import Metadata
 from numbers import Number
-from pycbc.waveform import waveform_modes
 from dataclasses import fields
 
 
 class BaseWaveform:
+    """Base for all Waveform objects, contains all necessary attributes and methods."""
+
     def __init__(
         self, strain: np.ndarray, time: np.ndarray, metadata: Metadata
     ) -> None:
@@ -70,7 +72,8 @@ class BaseWaveform:
         Returns:
             Number: The spin-weighted spherical harmonics at specified order.
         """
-        return waveform_modes.get_glm(l, m, iota) * np.exp(1j * m * phi)
+        print(spheroidal.sphericalY(-2, l, m)(iota, phi))
+        return spheroidal.sphericalY(-2, l, m)(iota, phi)
 
     @staticmethod
     def _kwargs_to_metadata(

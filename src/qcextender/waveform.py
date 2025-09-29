@@ -6,10 +6,11 @@ from pycbc.types import timeseries as ts
 from pycbc.filter.matchedfilter import match as cbcmatch
 from qcextender.metadata import Metadata
 from qcextender.basewaveform import BaseWaveform
+from qcextender.utils import lal_waves
 
 
 class Waveform(BaseWaveform):
-    """Base waveform class with which all calculations can be done, stores multi-modal (time domain) waveforms."""
+    """Waveform class with which all calculations can be done, stores multi-modal (time domain) waveforms."""
 
     def __init__(
         self, strain: np.ndarray, time: np.ndarray, metadata: Metadata
@@ -43,23 +44,45 @@ class Waveform(BaseWaveform):
             q = 1 / q
 
         kwargs.update(
-            library="PyCBC",
+            library="lalsimulation",
             q=q,
             approximant=approximant,
             modes=list(modes),
             total_mass=total_mass,
         )
+        metadata = cls._kwargs_to_metadata(kwargs)
 
         single_mode_strain = []
-        for mode in modes:
-            local_kwargs = kwargs.copy()
-            local_kwargs["mode_array"] = mode
-            hp, hc = get_td_waveform(**local_kwargs)
-            single_mode_strain.append(np.asarray(hp - 1j * hc))
+        if approximant in ["IMRPhenomD", "SEOBNRv4"]:
+            for mode in modes:
+                time, strain = lal_waves(
+                    approximant,
+                    kwargs["mass1"],
+                    kwargs["mass2"],
+                    metadata["spin1"],
+                    metadata["spin2"],
+                    metadata["distance"],
+                    metadata["coa_phase"],
+                    metadata["delta_t"],
+                    metadata["f_lower"],
+                    kwargs["f_ref"],
+                    mode,
+                )
+            single_mode_strain.append(strain)
+
+        # single_mode_strain = []
+        # for mode in modes:
+        #     local_kwargs = kwargs.copy()
+        #     local_kwargs["mode_array"] = mode
+        #     hp, hc = get_td_waveform(**local_kwargs)
+        #     single_mode_strain.append((hp - 1j * hc))
+
+        #     # single_mode_strain.append(
+        #     #     waveform_modes.get_td_waveform_modes(**local_kwargs)
+        #     # )
 
         multi_mode_strain = np.vstack(single_mode_strain)
-        time = hp.sample_times
-        metadata = cls._kwargs_to_metadata(kwargs)
+        time = cls._align(single_mode_strain[0], time)
 
         return cls(
             multi_mode_strain,

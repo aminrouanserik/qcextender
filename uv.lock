@@ -1156,16 +1156,18 @@ wheels = [
 
 [[package]]
 name = "qcextender"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "pycbc" },
+    { name = "spheroidal" },
     { name = "sxs" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pycbc", specifier = ">=2.9.0" },
+    { name = "spheroidal", specifier = ">=0.1.1" },
     { name = "sxs", specifier = ">=2025.0.12" },
 ]
 
@@ -1332,6 +1334,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/88/15/0896f2ac88f52675a5a1a48018f55cd52ceeb3a3fd17f621b651689ef892/spherical-1.0.18.tar.gz", hash = "sha256:cd1ea04957e50fa35105d2a019080d9475a09187fab70c386f459b19d1edbfa4", size = 82822, upload-time = "2025-09-08T21:23:43.024Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7d/4a/75aadc3b17430d4d9f3ad7bf0332a22b7ef78312e2b5b70774d2a301b9ec/spherical-1.0.18-py3-none-any.whl", hash = "sha256:4ed6ccc3964c5338b197f70e2c68e36e73fea9da7b3f53c9f24d6922f687242b", size = 55672, upload-time = "2025-09-08T21:23:41.729Z" },
+]
+
+[[package]]
+name = "spheroidal"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numba" },
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/38/48/e98183a7089a7fc4dae236efd7cd6c6e5f83ad7d773d0b88d6956e62e72c/spheroidal-0.1.1.tar.gz", hash = "sha256:4324d30d723eeb51d59badb365ae090bf50e300b176190cece9127213f765afa", size = 11851, upload-time = "2023-12-22T19:44:04.495Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/4a/c4660bc5fedb5245998e5d68d9365086fcf47b9524d5e61d1d35fcd836fd/spheroidal-0.1.1-py3-none-any.whl", hash = "sha256:ab72ed04e97edd2963298ed5ee9e5f6cee265a88749fe2ae5a351b01d7370378", size = 11976, upload-time = "2023-12-22T19:44:02.857Z" },
 ]
 
 [[package]]

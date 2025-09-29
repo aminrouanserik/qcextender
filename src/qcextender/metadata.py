@@ -98,7 +98,11 @@ class Metadata:
                 )
 
     def __copy__(self) -> Self:
-        """Return a shallow copy of the Metadata object."""
+        """Creates a shallow copy of this Metadata object.
+
+        Returns:
+            Self: Shallow copy of Metadata object.
+        """
         cls = self.__class__
 
         copied = cls(
@@ -115,6 +119,11 @@ class Metadata:
         return copied
 
     def copy(self) -> Self:
+        """Creates a shallow copy of this Metadata object.
+
+        Returns:
+            Self: Shallow copy of Metadata object.
+        """
         return self.__copy__()
 
     def to_dict(self) -> dict:

@@ -6,10 +6,11 @@ from numbers import Number
 from qcextender.metadata import Metadata
 from qcextender.waveform import Waveform
 from qcextender.basewaveform import BaseWaveform
+from scipy.interpolate import InterpolatedUnivariateSpline, make_interp_spline
 
 
 class DimensionlessWaveform(BaseWaveform):
-    """Base waveform class with which all calculations can be done, stores multi-modal (time domain) waveforms."""
+    """Dimensionless waveform class which can be converted to a standard Waveform class, stores multi-modal (time domain) waveforms."""
 
     def __init__(
         self, strain: np.ndarray, time: np.ndarray, metadata: Metadata
@@ -68,15 +69,15 @@ class DimensionlessWaveform(BaseWaveform):
 
     @staticmethod
     def _strain_m(strain: np.ndarray, mass: Number, distance: Number) -> np.ndarray:
-        """Converts the strain into a dimensionless strain.
+        """Converts geometric strain into strain in meters.
 
         Args:
-            strain (np.ndarray): N-dimensional array containing dimensioned strains.
+            strain (np.ndarray): N-dimensional array containing strain in geometric units.
             mass (Number): Total mass in solar masses
             distance (Number): Distance in Mpc.
 
         Returns:
-            np.ndarray: Dimensionless wave strain.
+            np.ndarray: Wave strain in meters.
         """
         distance *= 1e6 * lal.PC_SI
         correction = mass * lal.MTSUN_SI * lal.C_SI / distance
@@ -84,39 +85,63 @@ class DimensionlessWaveform(BaseWaveform):
 
     @staticmethod
     def _time_sec(time: np.ndarray, mass: Number) -> np.ndarray:
-        """Converts time from units of seconds to geometric units.
+        """Converts geometric time into time in seconds.
 
         Args:
-            time (np.ndarray): Time in seconds.
+            time (np.ndarray): Time in geometric units.
             mass (Number): Mass in solar masses.
 
         Returns:
-            np.ndarray: New time in geometric units.
+            np.ndarray: Time in seconds.
         """
         return time * (lal.MTSUN_SI * mass)
+
+    @staticmethod
+    def _freq_Hz(frequency, mass):
+        return frequency / (lal.MTSUN_SI * mass)
 
     def to_Waveform(
         self,
         f_lower: Number,
-        mass: Number,
+        total_mass: Number,
         distance: Number,
         inclination: Number = 0,
         coa_phase: Number = 0,
     ) -> Waveform:
+        """Creates a copy of any dimensionless waveform and casts to a regular waveform with the specified parameters.
+
+        Args:
+            f_lower (Number): Lower frequency bound of the signal.
+            total_mass (Number): Total mass of the binary in solar mass.
+            distance (Number): Distance to the merger in Mpc.
+            inclination (Number, optional): Inclination angle of the inspiral. Defaults to 0.
+            coa_phase (Number, optional): Coalescence phase. Defaults to 0.
+
+        Returns:
+            Waveform: Waveform object with the admitted properties.
+        """
+        time = self._time_sec(self.time, total_mass)
+
         single_mode_strains = []
-        for strain, mode in zip(self.strain, self.metadata.modes):
-            singlemode = self._strain_m(
-                strain, mass, distance
-            ) * self._spherical_harmonic(
-                mode[0], mode[1], inclination, coa_phase + np.pi / 2
-            )  # Shifted to make visual comparisons easier
-            single_mode_strains.append(singlemode)
+        for strain in self.strain:
+            singlemode = self._strain_m(strain, total_mass, distance)
+            freq = self._freq_Hz(
+                np.gradient(-np.unwrap(np.angle(self.strain[0])), self.time), total_mass
+            )
+            arg = np.abs(singlemode)
+            phase = np.unwrap(np.angle(singlemode))
+            mask = freq > f_lower
+            interpolatedarg = InterpolatedUnivariateSpline(time[mask], arg[mask])(time)
+            interpolatedphase = InterpolatedUnivariateSpline(time[mask], phase[mask])(
+                time
+            )
+            single_mode_strains.append(interpolatedarg * np.exp(1j * interpolatedphase))
 
         strain = np.vstack(single_mode_strains)
-        time = self._time_sec(self.time, mass)
+
         metadata = self.metadata.copy()
 
         newmetadata = metadata.to_dimensional(
-            f_lower, mass, distance, inclination, coa_phase
+            f_lower, total_mass, distance, inclination, coa_phase
         )
         return Waveform(strain, time, newmetadata)
