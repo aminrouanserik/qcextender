@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field, asdict
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Self
+from numbers import Number
+import lal
 
 
 @dataclass
@@ -81,7 +83,7 @@ class Metadata:
         return f"Metadata({', '.join(parts)})"
 
     def __post_init__(self):
-        """Runs after initialization enforcing proper (non) dimensionality.
+        """Runs after initialization enforcing prfrom numbers import Numberoper (non) dimensionality.
 
         Raises:
             ValueError: If missing keys that are crucial to dimensionality.
@@ -95,6 +97,26 @@ class Metadata:
                     "Both total_mass and distance have to be defined in the dimensioned case."
                 )
 
+    def __copy__(self) -> Self:
+        """Return a shallow copy of the Metadata object."""
+        cls = self.__class__
+
+        copied = cls(
+            **{
+                f.name: getattr(self, f.name)
+                for f in self.__dataclass_fields__.values()
+            }
+        )
+
+        # Add mutable objects here if added to class
+        if isinstance(self.modes, list):
+            copied.modes = self.modes.copy()
+
+        return copied
+
+    def copy(self) -> Self:
+        return self.__copy__()
+
     def to_dict(self) -> dict:
         """Returns Metadata as a dictionary.
 
@@ -102,3 +124,20 @@ class Metadata:
             dict: Metadata as a dictionary.
         """
         return asdict(self)
+
+    def to_dimensional(
+        self,
+        f_lower: Number,
+        total_mass: Number,
+        distance: Number,
+        inclination: Number,
+        coa_phase: Number,
+    ) -> Self:
+        self.f_lower = f_lower
+        self.total_mass = total_mass
+        self.distance = distance
+        self.inclination = inclination
+        self.coa_phase = coa_phase
+        self.delta_t *= lal.MTSUN_SI * total_mass
+        self.dimensionless = False
+        return self

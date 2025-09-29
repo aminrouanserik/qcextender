@@ -4,13 +4,13 @@
     - [x] Avoid printing None features
     - [x] Dimensionless vs. dimensioned split on creation
     - [x] Change print order in __repr__()
-    - [ ] Conversion and lock
+    - [x] Conversion
 1. **Split Waveform objects**
     - [x] BaseWaveform containing all common features, time-series
     - [x] SXS waveform, dimensionless, time-series
     - [x] Waveform, dimensioned, time-series
 1. **Convert to Waveform**
-    - [ ] Add a feature turning SXS Waveforms into Waveforms when specifying mass, distance, etc.
+    - [x] Add a feature turning SXS Waveforms into Waveforms when specifying mass, distance, etc.
     - [ ] Shift amplitude ***and*** phase
 1. **Adjust match calculation**
     - [ ] Turn into complex match?
