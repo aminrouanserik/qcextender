@@ -113,6 +113,7 @@ class Waveform(BaseWaveform):
         if f_lower is None:
             f_lower = max(self.metadata.f_lower, waveform.metadata.f_lower)
 
+        print(wf1.delta_t, wf2.delta_t)
         flen = 1 << (max(len(wf1), len(wf2)) - 1).bit_length()
         delta_f = 1.0 / (flen * wf1.delta_t)
 

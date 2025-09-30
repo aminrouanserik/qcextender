@@ -125,23 +125,39 @@ class DimensionlessWaveform(BaseWaveform):
         single_mode_strains = []
         for strain in self.strain:
             singlemode = self._strain_m(strain, total_mass, distance)
+
+            # Scales decently now, probably not the most reliable and still see some issues
             freq = self._freq_Hz(
                 np.gradient(-np.unwrap(np.angle(self.strain[0])), self.time), total_mass
             )
             arg = np.abs(singlemode)
             phase = np.unwrap(np.angle(singlemode))
-            mask = freq > f_lower
-            interpolatedarg = InterpolatedUnivariateSpline(time[mask], arg[mask])(time)
-            interpolatedphase = InterpolatedUnivariateSpline(time[mask], phase[mask])(
-                time
+
+            try:
+                # Need a better way of doing this, too dependent on the one example I saw.
+                # Why 4 * f_lower?
+                cutoff = int(np.argwhere(np.isclose(freq, 4 * f_lower, atol=1))[-2])
+            except:
+                cutoff = 0
+
+            interpolatedarg = InterpolatedUnivariateSpline(time[cutoff:], arg[cutoff:])(
+                time[cutoff:]
             )
+            # Probably need something smarter than this, start is too sudden instead of gradual like in models
+            interpolatedphase = InterpolatedUnivariateSpline(
+                time[cutoff:], phase[cutoff:]
+            )(time[cutoff:])
             single_mode_strains.append(interpolatedarg * np.exp(1j * interpolatedphase))
 
         strain = np.vstack(single_mode_strains)
-
         metadata = self.metadata.copy()
-
         newmetadata = metadata.to_dimensional(
             f_lower, total_mass, distance, inclination, coa_phase
         )
-        return Waveform(strain, time, newmetadata)
+
+        return (
+            Waveform(strain, time[cutoff:], newmetadata),
+            freq[cutoff:],
+            np.gradient(-np.unwrap(np.angle(strain[0])), time[cutoff:])[cutoff:],
+            time[cutoff:],
+        )
