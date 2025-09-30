@@ -1,4 +1,11 @@
-### **To-Do**
+## qcextender
+
+A Python package for extending and unifying gravitational waveform generation 
+(PyCBC, SEOBNR, SXS, etc.) with consistent metadata, conversions between dimensionless and 
+dimensioned representations, and standardized match calculations.
+
+### Development Roadmap
+Below is the current development status (as of v0.1.4):
 1. **Seperate Metadata**
     - [x] New Metadata file
     - [x] Avoid printing None features
@@ -15,21 +22,27 @@
 1. **Adjust match calculation**
     - [x] Correct SXS delta_t
     - [x] Resize to single delta_t
-    - [ ] Match is now of polarizations, or calculate full wave first? (Open question)
-    - [ ] If full wave, check real == imag (Note, only for full waveform so need to know previous answer)
+    - [x] Calculate full waveform first
 1. **Add eccentricity to Waveform**
     - [ ] Add a function allowing the eccentricity to be changed for a Waveform object, using a function hook
 1. **Clean up**
-    - [ ] Move (single-line) helper functions to utils (or units.py)
-    - [ ] Adjust Metadata class (add lock, f_ref and check conversion. Also polarizations, when are spherical harmonics expected in Metadata?)
-    - [ ] Add comments where necessary
-    - [ ] Adjust docstrings, add longer explanations next to single-line summaries
-    - [ ] mkdocs full documentation
+    *Refactor*
+        - [ ] Move (single-line) helper functions to utils (or units.py)
+        - [ ] Adjust Metadata class (add lock, f_ref and check conversion from DimensionlessWaveform -> Waveform)
+    *Docs*
+        - [ ] Add comments where necessary
+        - [ ] Adjust docstrings, add longer explanations next to single-line summaries
+        - [ ] mkdocs full documentation
 
 **Frequency scaling**
     - [x] Rewrite to save h_lm instead of hp - i hc
     - [x] Decompose h_lm into amplitude and phase (to_waveform)
     - [x] Cut at f_lower (to_waveform)
     - [x] Reconstruct (to_waveform)
+    - [ ] Smoothly calculate a new frequency (to_waveform)
     - [ ] Fix f_ref of other waveforms to SXS metadata
     - [ ] Investigate why (3, 3) mode returns None for IMRPhenomD
+
+**Open Questions**
+    - Decide whether to calculate the complex match since the real does not exactly equal the imaginary match.
+    - Identify what needs to change in Metadata for modes instead of polarizations

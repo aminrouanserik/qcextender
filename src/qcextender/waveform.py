@@ -112,8 +112,35 @@ class Waveform(BaseWaveform):
         wf1_time = np.arange(self.time[0], self.time[-1], delta_t)
         wf2_time = np.arange(waveform.time[0], waveform.time[-1], delta_t)
 
-        wf1_strain = make_interp_spline(self.time, self.strain[0])(wf1_time)
-        wf2_strain = make_interp_spline(waveform.time, waveform.strain[0])(wf2_time)
+        wf1_strain = 0
+        for mode in self.metadata.modes:
+            single_mode = make_interp_spline(self.time, self[mode])(wf1_time)
+            single_minus_mode = make_interp_spline(self.time, self[mode[0], -mode[1]])(
+                wf1_time
+            )
+            wf1_strain += single_mode * self._spherical_harmonic(
+                mode[0], mode[1], self.metadata.inclination, self.metadata.coa_phase
+            ) + single_minus_mode * self._spherical_harmonic(
+                mode[0], -mode[1], self.metadata.inclination, self.metadata.coa_phase
+            )
+
+        wf2_strain = 0
+        for mode in waveform.metadata.modes:
+            single_mode = make_interp_spline(waveform.time, waveform[mode])(wf2_time)
+            single_minus_mode = make_interp_spline(
+                waveform.time, waveform[mode[0], -mode[1]]
+            )(wf2_time)
+            wf2_strain += single_mode * self._spherical_harmonic(
+                mode[0],
+                mode[1],
+                waveform.metadata.inclination,
+                waveform.metadata.coa_phase,
+            ) + single_minus_mode * self._spherical_harmonic(
+                mode[0],
+                -mode[1],
+                waveform.metadata.inclination,
+                waveform.metadata.coa_phase,
+            )
 
         wf1 = ts.TimeSeries(wf1_strain.real, delta_t=delta_t)
         wf2 = ts.TimeSeries(wf2_strain.real, delta_t=delta_t)

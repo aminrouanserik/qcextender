@@ -72,7 +72,6 @@ class BaseWaveform:
         Returns:
             Number: The spin-weighted spherical harmonics at specified order.
         """
-        print(spheroidal.sphericalY(-2, l, m)(iota, phi))
         return spheroidal.sphericalY(-2, l, m)(iota, phi)
 
     @staticmethod
