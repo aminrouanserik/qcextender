@@ -6,7 +6,7 @@ from numbers import Number
 from qcextender.metadata import Metadata
 from qcextender.waveform import Waveform
 from qcextender.basewaveform import BaseWaveform
-from scipy.interpolate import InterpolatedUnivariateSpline, make_interp_spline
+from scipy.interpolate import make_interp_spline
 
 
 class DimensionlessWaveform(BaseWaveform):
@@ -46,23 +46,26 @@ class DimensionlessWaveform(BaseWaveform):
         if q < 1:
             q = 1 / q
 
+        dt = np.min(np.diff(sim.h.t))
+        sim = sim.h.interpolate(np.arange(sim.h.t[0], sim.h.t[-1], dt))
+
         meta.update(
             library="SXS",
             simulation_id=sim_id,
             q=q,
             modes=list(modes),
-            delta_t=sim.h.t[1] - sim.h.t[0],
+            delta_t=dt,
             dimensionless=True,
         )
 
         single_mode_strain = []
         for l, m in modes:
             try:
-                single_mode_strain.append(np.array(sim.h[:, sim.h.index(l, m)]))
+                single_mode_strain.append(np.array(sim[:, sim.index(l, m)]))
             except:
                 raise ValueError(f"Mode (l={l}, m={m}) not found in this simulation.")
 
-        time = cls._align(np.array(sim.h[:, sim.h.index(l, m)]), sim.h.t)
+        time = cls._align(np.array(sim[:, sim.index(l, m)]), sim.t)
         multi_mode_strain = np.vstack(single_mode_strain)
         metadata = cls._kwargs_to_metadata(meta)
         return cls(multi_mode_strain, time, metadata)
@@ -140,13 +143,13 @@ class DimensionlessWaveform(BaseWaveform):
             except:
                 cutoff = 0
 
-            interpolatedarg = InterpolatedUnivariateSpline(time[cutoff:], arg[cutoff:])(
+            interpolatedarg = make_interp_spline(time[cutoff:], arg[cutoff:])(
                 time[cutoff:]
             )
             # Probably need something smarter than this, start is too sudden instead of gradual like in models
-            interpolatedphase = InterpolatedUnivariateSpline(
-                time[cutoff:], phase[cutoff:]
-            )(time[cutoff:])
+            interpolatedphase = make_interp_spline(time[cutoff:], phase[cutoff:])(
+                time[cutoff:]
+            )
             single_mode_strains.append(interpolatedarg * np.exp(1j * interpolatedphase))
 
         strain = np.vstack(single_mode_strains)

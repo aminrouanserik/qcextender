@@ -1,12 +1,14 @@
 import numpy as np
 from typing import Iterable, Sequence, Self
-from pycbc.waveform import get_td_waveform
+from scipy.interpolate import make_interp_spline
 from pycbc.psd import aLIGOZeroDetHighPower
 from pycbc.types import timeseries as ts
 from pycbc.filter.matchedfilter import match as cbcmatch
 from qcextender.metadata import Metadata
 from qcextender.basewaveform import BaseWaveform
 from qcextender.utils import lal_waves
+
+# from pycbc.waveform import get_td_waveform
 
 
 class Waveform(BaseWaveform):
@@ -104,18 +106,23 @@ class Waveform(BaseWaveform):
             psd (str, optional): The PSD to use in the match. Defaults to "aLIGOZeroDetHighPower".
 
         Returns:
-            float: The real match of the two waveforms.
+            float: The match of the real part of two modes.
         """
+        delta_t = max(self.metadata.delta_t, waveform.metadata.delta_t)
+        wf1_time = np.arange(self.time[0], self.time[-1], delta_t)
+        wf2_time = np.arange(waveform.time[0], waveform.time[-1], delta_t)
 
-        wf1 = ts.TimeSeries(self[2, 2].real, delta_t=self.metadata.delta_t)
-        wf2 = ts.TimeSeries(waveform[2, 2].real, delta_t=waveform.metadata.delta_t)
+        wf1_strain = make_interp_spline(self.time, self.strain[0])(wf1_time)
+        wf2_strain = make_interp_spline(waveform.time, waveform.strain[0])(wf2_time)
+
+        wf1 = ts.TimeSeries(wf1_strain.real, delta_t=delta_t)
+        wf2 = ts.TimeSeries(wf2_strain.real, delta_t=delta_t)
 
         if f_lower is None:
             f_lower = max(self.metadata.f_lower, waveform.metadata.f_lower)
 
-        print(wf1.delta_t, wf2.delta_t)
         flen = 1 << (max(len(wf1), len(wf2)) - 1).bit_length()
-        delta_f = 1.0 / (flen * wf1.delta_t)
+        delta_f = 1.0 / (flen * delta_t)
 
         psd = aLIGOZeroDetHighPower(flen, delta_f, f_lower)
         wf1.resize(flen)
