@@ -5,7 +5,7 @@ A Python package for extending and unifying gravitational waveform generation
 dimensioned representations, and standardized match calculations.
 
 ### Development Roadmap
-Below is the current development status (as of v0.1.4):
+Below is the current development status (as of v0.1.5):
 1. **Seperate Metadata**
     - [x] New Metadata file
     - [x] Avoid printing None features
@@ -18,8 +18,7 @@ Below is the current development status (as of v0.1.4):
     - [x] Waveform, dimensioned, time-series
 1. **Convert to Waveform**
     - [x] Add a feature turning SXS Waveforms into Waveforms when specifying mass, distance, etc.
-    - [x] Shift amplitude ***and*** frequency
-    - [ ] Lower frequency bound
+    - [x] Shift amplitude ***and*** frequency (Currently shifting/cutting based on the phase (not a bad idea but needs correction))
 1. **Adjust match calculation**
     - [x] Correct SXS delta_t
     - [x] Resize to single delta_t
@@ -36,6 +35,7 @@ Below is the current development status (as of v0.1.4):
         - [ ] mkdocs full documentation
 
 **Issues**
+    - [ ] Clean SXS waveforms
     - [ ] Fix f_ref of other waveforms to SXS metadata
     - [ ] Investigate why (3, 3) mode returns None for IMRPhenomD
 
