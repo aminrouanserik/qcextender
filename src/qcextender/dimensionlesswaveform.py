@@ -6,6 +6,7 @@ from numbers import Number
 from qcextender.metadata import Metadata
 from qcextender.waveform import Waveform
 from qcextender.basewaveform import BaseWaveform
+from qcextender.units import tM_to_tSI, mM_to_mSI
 from scipy.interpolate import make_interp_spline
 
 
@@ -70,39 +71,6 @@ class DimensionlessWaveform(BaseWaveform):
         metadata = cls._kwargs_to_metadata(meta)
         return cls(multi_mode_strain, time, metadata)
 
-    @staticmethod
-    def _strain_m(strain: np.ndarray, mass: Number, distance: Number) -> np.ndarray:
-        """Converts geometric strain into strain in meters.
-
-        Args:
-            strain (np.ndarray): N-dimensional array containing strain in geometric units.
-            mass (Number): Total mass in solar masses
-            distance (Number): Distance in Mpc.
-
-        Returns:
-            np.ndarray: Wave strain in meters.
-        """
-        distance *= 1e6 * lal.PC_SI
-        correction = mass * lal.MTSUN_SI * lal.C_SI / distance
-        return strain * correction
-
-    @staticmethod
-    def _time_sec(time: np.ndarray, mass: Number) -> np.ndarray:
-        """Converts geometric time into time in seconds.
-
-        Args:
-            time (np.ndarray): Time in geometric units.
-            mass (Number): Mass in solar masses.
-
-        Returns:
-            np.ndarray: Time in seconds.
-        """
-        return time * (lal.MTSUN_SI * mass)
-
-    @staticmethod
-    def _freq_Hz(frequency, mass):
-        return frequency / (lal.MTSUN_SI * mass)
-
     def to_Waveform(
         self,
         f_lower: Number,
@@ -123,11 +91,11 @@ class DimensionlessWaveform(BaseWaveform):
         Returns:
             Waveform: Waveform object with the admitted properties.
         """
-        time = self._time_sec(self.time, total_mass)
+        time = tM_to_tSI(self.time, total_mass)
 
         single_mode_strains = []
         for strain in self.strain:
-            singlemode = self._strain_m(strain, total_mass, distance)
+            singlemode = mM_to_mSI(strain, total_mass, distance)
 
             freq = np.gradient(-np.unwrap(np.angle(singlemode)), time)
             arg = np.abs(singlemode)
