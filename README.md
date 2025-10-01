@@ -19,6 +19,7 @@ Below is the current development status (as of v0.1.4):
 1. **Convert to Waveform**
     - [x] Add a feature turning SXS Waveforms into Waveforms when specifying mass, distance, etc.
     - [x] Shift amplitude ***and*** frequency
+    - [ ] Lower frequency bound
 1. **Adjust match calculation**
     - [x] Correct SXS delta_t
     - [x] Resize to single delta_t
@@ -34,12 +35,7 @@ Below is the current development status (as of v0.1.4):
         - [ ] Adjust docstrings, add longer explanations next to single-line summaries
         - [ ] mkdocs full documentation
 
-**Frequency scaling**
-    - [x] Rewrite to save h_lm instead of hp - i hc
-    - [x] Decompose h_lm into amplitude and phase (to_waveform)
-    - [x] Cut at f_lower (to_waveform)
-    - [x] Reconstruct (to_waveform)
-    - [ ] Smoothly calculate a new frequency (to_waveform)
+**Issues**
     - [ ] Fix f_ref of other waveforms to SXS metadata
     - [ ] Investigate why (3, 3) mode returns None for IMRPhenomD
 

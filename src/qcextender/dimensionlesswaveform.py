@@ -158,9 +158,4 @@ class DimensionlessWaveform(BaseWaveform):
             f_lower, total_mass, distance, inclination, coa_phase
         )
 
-        return (
-            Waveform(strain, time[cutoff:], newmetadata),
-            freq[cutoff:],
-            np.gradient(-np.unwrap(np.angle(strain[0])), time[cutoff:])[cutoff:],
-            time[cutoff:],
-        )
+        return Waveform(strain, time[cutoff:], newmetadata)

@@ -19,7 +19,7 @@ phenom = Waveform.from_model("IMRPhenomD", [(2, 2)], **kwargs)
 seob = Waveform.from_model("SEOBNRv4", [(2, 2)], **kwargs)
 
 sim = DimensionlessWaveform.from_sim("SXS:BBH:3977")
-sim10sm, freq, freqadj, time = sim.to_Waveform(20, 100, 10, 0, 0)
+sim10sm = sim.to_Waveform(20, 100, 10, 0, 0)
 
 print(phenom.match(seob))
 print(sim10sm.match(phenom))
@@ -28,19 +28,30 @@ print(sim10sm.match(phenom))
 # print(sim.metadata)
 # print(sim10sm.metadata)
 
-# plt.plot(
-#     phenom.time,
-#     np.gradient(-np.unwrap(np.angle(phenom[2, 2])), phenom.time),
-#     label="phenom",
-# )
-# plt.plot(
-#     seob.time, np.gradient(-np.unwrap(np.angle(seob[2, 2])), seob.time), label="seob"
-# )
-# plt.plot(time, freq, label="sim")
-# plt.legend()
-# plt.show()
+phenomfreq = phenom.freq()
+seobfreq = seob.freq()
+sim10smfreq = sim10sm.freq()
 
-plt.plot(phenom.time, phenom[2, 2])
-plt.plot(seob.time, seob[2, 2])
-plt.plot(sim10sm.time, sim10sm[2, 2])
+plt.plot(phenomfreq.sample_frequencies, phenomfreq.real(), label="phenom")
+plt.plot(seobfreq.sample_frequencies, seobfreq.real(), label="seob")
+plt.plot(sim10smfreq.sample_frequencies, sim10smfreq.real(), label="sim")
+plt.ylabel("Strain (m)")
+plt.xlabel("Frequency (Hz)")
+plt.legend()
+plt.show()
+
+plt.plot(phenom.time, phenom.abs(), label="phenom")
+plt.plot(seob.time, seob.abs(), label="seob")
+plt.plot(sim10sm.time, sim10sm.abs(), label="sim")
+plt.xlabel("Time (s)")
+plt.ylabel("Amplitude(m)")
+plt.legend()
+plt.show()
+
+plt.plot(phenom.time, phenom[2, 2], label="IMRPhenomD")
+plt.plot(seob.time, seob[2, 2], label="SEOBNRv4")
+plt.plot(sim10sm.time, sim10sm[2, 2], label="SXS:BBH:3977")
+plt.xlabel("Time (s)")
+plt.ylabel("Strain (m)")
+plt.legend()
 plt.show()

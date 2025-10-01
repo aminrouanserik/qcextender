@@ -6,9 +6,7 @@ from pycbc.types import timeseries as ts
 from pycbc.filter.matchedfilter import match as cbcmatch
 from qcextender.metadata import Metadata
 from qcextender.basewaveform import BaseWaveform
-from qcextender.utils import lal_waves
-
-# from pycbc.waveform import get_td_waveform
+from qcextender.models import lal_modes
 
 
 class Waveform(BaseWaveform):
@@ -57,7 +55,7 @@ class Waveform(BaseWaveform):
         single_mode_strain = []
         if approximant in ["IMRPhenomD", "SEOBNRv4"]:
             for mode in modes:
-                time, strain = lal_waves(
+                time, strain = lal_modes(
                     approximant,
                     kwargs["mass1"],
                     kwargs["mass2"],
@@ -71,17 +69,6 @@ class Waveform(BaseWaveform):
                     mode,
                 )
             single_mode_strain.append(strain)
-
-        # single_mode_strain = []
-        # for mode in modes:
-        #     local_kwargs = kwargs.copy()
-        #     local_kwargs["mode_array"] = mode
-        #     hp, hc = get_td_waveform(**local_kwargs)
-        #     single_mode_strain.append((hp - 1j * hc))
-
-        #     # single_mode_strain.append(
-        #     #     waveform_modes.get_td_waveform_modes(**local_kwargs)
-        #     # )
 
         multi_mode_strain = np.vstack(single_mode_strain)
         time = cls._align(single_mode_strain[0], time)
@@ -156,3 +143,26 @@ class Waveform(BaseWaveform):
         wf2.resize(flen)
 
         return cbcmatch(wf1, wf2, psd=psd, low_frequency_cutoff=f_lower)[0]
+
+    def freq(self, mode: tuple[int, int] = (2, 2)) -> np.ndarray:
+
+        delta_t = self.metadata.delta_t
+
+        wf_strain = 0
+        for mode in self.metadata.modes:
+            single_mode = self[mode]
+            single_minus_mode = self[mode[0], -mode[1]]
+            wf_strain += single_mode * self._spherical_harmonic(
+                mode[0], mode[1], self.metadata.inclination, self.metadata.coa_phase
+            ) + single_minus_mode * self._spherical_harmonic(
+                mode[0], -mode[1], self.metadata.inclination, self.metadata.coa_phase
+            )
+
+        wf = ts.TimeSeries(wf_strain.real, delta_t=delta_t)
+
+        wfreq = wf.to_frequencyseries()
+
+        return wfreq
+
+    def abs(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
+        return np.abs(self[mode])
