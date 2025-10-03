@@ -38,6 +38,7 @@ Below is the current development status (as of v0.1.6):
     - [ ] Clean SXS waveforms
     - [ ] Fix f_ref of other waveforms to SXS metadata
     - [ ] Investigate why (3, 3) mode returns None for IMRPhenomD
+    - [ ] Check required keys, keyerror is vague
 
 **Open Questions**
     - Decide whether to calculate the complex match since the real does not exactly equal the imaginary match.

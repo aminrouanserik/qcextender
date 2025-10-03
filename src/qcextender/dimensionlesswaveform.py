@@ -10,7 +10,7 @@ from scipy.interpolate import make_interp_spline
 
 
 class DimensionlessWaveform(BaseWaveform):
-    """Dimensionless waveform class which can be converted to a standard Waveform class, stores multi-modal (time domain) waveforms."""
+    """Dimensionless waveform class which can be converted to a standard Waveform class, stores multiple modes, time, and simulation metadata."""
 
     def __init__(
         self, strain: np.ndarray, time: np.ndarray, metadata: Metadata
@@ -100,11 +100,10 @@ class DimensionlessWaveform(BaseWaveform):
             arg = np.abs(singlemode)
             phase = np.unwrap(np.angle(singlemode))
 
-            # Index of the argwhere needs to be redone
+            # Index of the argwhere needs to be redone and tested, reasonable now
             try:
-                cutoff = int(
-                    np.argwhere(np.isclose(omega, 2 * np.pi * f_lower, atol=0.1))[-2]
-                )
+                fpoints = np.argwhere(np.isclose(omega, 2 * np.pi * f_lower, atol=0.1))
+                cutoff = int(fpoints[len(fpoints) // 2])
             except:
                 cutoff = 0
 

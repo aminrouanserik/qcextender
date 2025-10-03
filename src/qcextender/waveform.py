@@ -28,7 +28,7 @@ class Waveform(BaseWaveform):
     @classmethod
     def from_model(
         cls, approximant: str, modes: Iterable[Sequence[int]] = [(2, 2)], **kwargs
-    ) -> Self:  # Dimensioned
+    ) -> Self:
         """Generates a multi-modal time-domain waveform from a specified model using PyCBC.
 
         Args:
@@ -106,9 +106,9 @@ class Waveform(BaseWaveform):
             single_minus_mode = make_interp_spline(self.time, self[mode[0], -mode[1]])(
                 wf1_time
             )
-            wf1_strain += single_mode * self._spherical_harmonic(
+            wf1_strain += single_mode * spherical_harmonics(
                 mode[0], mode[1], self.metadata.inclination, self.metadata.coa_phase
-            ) + single_minus_mode * self._spherical_harmonic(
+            ) + single_minus_mode * spherical_harmonics(
                 mode[0], -mode[1], self.metadata.inclination, self.metadata.coa_phase
             )
 
@@ -118,12 +118,12 @@ class Waveform(BaseWaveform):
             single_minus_mode = make_interp_spline(
                 waveform.time, waveform[mode[0], -mode[1]]
             )(wf2_time)
-            wf2_strain += single_mode * self._spherical_harmonic(
+            wf2_strain += single_mode * spherical_harmonics(
                 mode[0],
                 mode[1],
                 waveform.metadata.inclination,
                 waveform.metadata.coa_phase,
-            ) + single_minus_mode * self._spherical_harmonic(
+            ) + single_minus_mode * spherical_harmonics(
                 mode[0],
                 -mode[1],
                 waveform.metadata.inclination,
@@ -150,39 +150,15 @@ class Waveform(BaseWaveform):
         delta_t = self.metadata.delta_t
 
         wf_strain = 0
-        wf_strainalt = 0
         for mode in self.metadata.modes:
             single_mode = self[mode]
             single_minus_mode = self[mode[0], -mode[1]]
-            wf_strain += single_mode * self._spherical_harmonic(
+
+            wf_strain += single_mode * spherical_harmonics(
                 mode[0], mode[1], self.metadata.inclination, self.metadata.coa_phase
-            ) + single_minus_mode * self._spherical_harmonic(
+            ) + single_minus_mode * spherical_harmonics(
                 mode[0], -mode[1], self.metadata.inclination, self.metadata.coa_phase
             )
-
-            # wf_strainalt += single_mode * spherical_harmonics(
-            #     mode[0], mode[1], self.metadata.inclination, self.metadata.coa_phase
-            # ) + single_minus_mode * spherical_harmonics(
-            #     mode[0], -mode[1], self.metadata.inclination, self.metadata.coa_phase
-            # )
-            # print(
-            #     np.allclose(
-            #         self._spherical_harmonic(
-            #             mode[0],
-            #             mode[1],
-            #             self.metadata.inclination,
-            #             self.metadata.coa_phase,
-            #         ),
-            #         spherical_harmonics(
-            #             mode[0],
-            #             mode[1],
-            #             self.metadata.inclination,
-            #             self.metadata.coa_phase,
-            #         ),
-            #         rtol=1e-12,
-            #         atol=1e-14,
-            #     )
-            # )
 
         wf = ts.TimeSeries(wf_strain.real, delta_t=delta_t)
 
@@ -190,7 +166,7 @@ class Waveform(BaseWaveform):
 
         return wfreq
 
-    def add_eccentricity(self, func, modes=[(2, 2)]):
+    def add_eccentricity(self, func, modes=[(2, 2)], **kwargs):
         for mode in modes:
-            phase, amplitude = func(self, mode)
+            phase, amplitude = func(self, mode, **kwargs)
             self[mode] = amplitude * np.exp(1j * phase)

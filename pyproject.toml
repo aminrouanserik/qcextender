@@ -1,6 +1,6 @@
 [project]
 name = "qcextender"
-version = "0.1.6"
+version = "0.1.7"
 description = "This package aims to extend any quasi-circular waveform with complex features."
 readme = "README.md"
 authors = [
@@ -9,7 +9,6 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "pycbc>=2.9.0",
-    "spheroidal>=0.1.1",
     "sxs>=2025.0.12",
 ]
 

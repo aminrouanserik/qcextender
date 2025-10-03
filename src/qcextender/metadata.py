@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field, asdict
 from typing import Iterable, Optional, Self
 from numbers import Number
-import lal
+from qcextender.units import tM_to_tSI
 
 
 @dataclass
@@ -32,7 +32,7 @@ class Metadata:
     coa_phase: float = 0
 
     f_lower: Optional[float] = None
-    # f_final: Optional[float] = None
+    f_ref: Optional[float] = None
 
     modes: Iterable[tuple[int, int]] = field(default_factory=list)
     # domain: str = "time"
@@ -52,6 +52,7 @@ class Metadata:
         "inclination",
         "coa_phase",
         "f_lower",
+        "f_ref",
         "delta_t",
         "modes",
         "dimensionless",
@@ -59,13 +60,13 @@ class Metadata:
     ]
 
     def __getitem__(self, key: str) -> type:
-        """Get an item from the metadata.
+        """Get an item from the metadata.=
 
         Args:
             key (str): Name of the requested item.
 
-        Returns:
-            type: Current value corresponding to the key.
+        Returns:=
+            type: Value of the key.
         """
         return getattr(self, key)
 
@@ -147,6 +148,6 @@ class Metadata:
         self.distance = distance
         self.inclination = inclination
         self.coa_phase = coa_phase
-        self.delta_t *= lal.MTSUN_SI * total_mass
+        self.delta_t = tM_to_tSI(self.delta_t, total_mass)
         self.dimensionless = False
         return self

@@ -1,8 +1,6 @@
 import numpy as np
-import spheroidal
-from qcextender.metadata import Metadata
-from numbers import Number
 from dataclasses import fields
+from qcextender.metadata import Metadata
 
 
 class BaseWaveform:
@@ -56,23 +54,8 @@ class BaseWaveform:
         Returns:
             np.ndarray: New time array.
         """
-        time -= time[np.argmax(np.abs(strain))]
+        time -= time[np.argmax(np.abs(strain))] + time[0]
         return time
-
-    @staticmethod
-    def _spherical_harmonic(l: Number, m: Number, iota: Number, phi: Number) -> Number:
-        """Calculates the spin-weighted spherical harmonics for any mode.
-
-        Args:
-            l (Number): Spherical harmonic degree.
-            m (Number): Spherical harmonic order.
-            iota (Number): The inclination in radians.
-            phi (Number): The coalescence phase.
-
-        Returns:
-            Number: The spin-weighted spherical harmonics at specified order.
-        """
-        return spheroidal.sphericalY(-2, l, m)(iota, phi)
 
     @staticmethod
     def _kwargs_to_metadata(
@@ -105,7 +88,7 @@ class BaseWaveform:
 
         return Metadata(**fixed_kwargs)
 
-    def abs(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
+    def amp(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
         """Returns the amplitude of the mode strain.
 
         Args:
@@ -115,6 +98,17 @@ class BaseWaveform:
             np.ndarray: The amplitude of the mode.
         """
         return np.abs(self[mode])
+
+    def phase(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
+        """Returns the phase for a single mode.
+
+        Args:
+            mode (tuple[int, int], optional): Mode of which the phase is requested. Defaults to the dominant mode [2, 2].
+
+        Returns:
+            np.ndarray: The phase of the mode.
+        """
+        return np.unwrap(np.angle(self[mode]))
 
     def omega(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
         """Returns the omega for a single mode.
