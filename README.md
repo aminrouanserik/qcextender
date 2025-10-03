@@ -5,7 +5,7 @@ A Python package for extending and unifying gravitational waveform generation
 dimensioned representations, and standardized match calculations.
 
 ### Development Roadmap
-Below is the current development status (as of v0.1.5):
+Below is the current development status (as of v0.1.6):
 1. **Seperate Metadata**
     - [x] New Metadata file
     - [x] Avoid printing None features
@@ -24,7 +24,7 @@ Below is the current development status (as of v0.1.5):
     - [x] Resize to single delta_t
     - [x] Calculate full waveform first
 1. **Add eccentricity to Waveform**
-    - [ ] Add a function allowing the eccentricity to be changed for a Waveform object, using a function hook
+    - [x] Add a function allowing the eccentricity to be changed for a Waveform object, using a function hook
 1. **Clean up**
     *Refactor*
         - [ ] Move (single-line) helper functions to utils (or units.py)
@@ -42,3 +42,4 @@ Below is the current development status (as of v0.1.5):
 **Open Questions**
     - Decide whether to calculate the complex match since the real does not exactly equal the imaginary match.
     - Identify what needs to change in Metadata for modes instead of polarizations
+    - Do I always calculate real and imaginary components differently and then recombine?

@@ -104,3 +104,25 @@ class BaseWaveform:
                     fixed_kwargs[k] = v
 
         return Metadata(**fixed_kwargs)
+
+    def abs(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
+        """Returns the amplitude of the mode strain.
+
+        Args:
+            mode (tuple[int, int], optional): Mode of which the amplitude is requested. Defaults to the dominant mode [2, 2].
+
+        Returns:
+            np.ndarray: The amplitude of the mode.
+        """
+        return np.abs(self[mode])
+
+    def omega(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
+        """Returns the omega for a single mode.
+
+        Args:
+            mode (tuple[int, int], optional): Mode of which the omega is requested. Defaults to the dominant mode [2, 2].
+
+        Returns:
+            np.ndarray: The omega of the mode.
+        """
+        return np.gradient(-np.unwrap(np.angle(self[mode])), self.time)

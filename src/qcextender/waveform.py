@@ -7,6 +7,7 @@ from pycbc.filter.matchedfilter import match as cbcmatch
 from qcextender.metadata import Metadata
 from qcextender.basewaveform import BaseWaveform
 from qcextender.models import lal_modes
+from qcextender.utils import spherical_harmonics
 
 
 class Waveform(BaseWaveform):
@@ -149,6 +150,7 @@ class Waveform(BaseWaveform):
         delta_t = self.metadata.delta_t
 
         wf_strain = 0
+        wf_strainalt = 0
         for mode in self.metadata.modes:
             single_mode = self[mode]
             single_minus_mode = self[mode[0], -mode[1]]
@@ -158,11 +160,37 @@ class Waveform(BaseWaveform):
                 mode[0], -mode[1], self.metadata.inclination, self.metadata.coa_phase
             )
 
+            # wf_strainalt += single_mode * spherical_harmonics(
+            #     mode[0], mode[1], self.metadata.inclination, self.metadata.coa_phase
+            # ) + single_minus_mode * spherical_harmonics(
+            #     mode[0], -mode[1], self.metadata.inclination, self.metadata.coa_phase
+            # )
+            # print(
+            #     np.allclose(
+            #         self._spherical_harmonic(
+            #             mode[0],
+            #             mode[1],
+            #             self.metadata.inclination,
+            #             self.metadata.coa_phase,
+            #         ),
+            #         spherical_harmonics(
+            #             mode[0],
+            #             mode[1],
+            #             self.metadata.inclination,
+            #             self.metadata.coa_phase,
+            #         ),
+            #         rtol=1e-12,
+            #         atol=1e-14,
+            #     )
+            # )
+
         wf = ts.TimeSeries(wf_strain.real, delta_t=delta_t)
 
         wfreq = wf.to_frequencyseries()
 
         return wfreq
 
-    def abs(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
-        return np.abs(self[mode])
+    def add_eccentricity(self, func, modes=[(2, 2)]):
+        for mode in modes:
+            phase, amplitude = func(self, mode)
+            self[mode] = amplitude * np.exp(1j * phase)

@@ -1,5 +1,4 @@
 import sxs
-import lal
 import numpy as np
 from typing import Iterable, Sequence, Self
 from numbers import Number
@@ -94,17 +93,17 @@ class DimensionlessWaveform(BaseWaveform):
         time = tM_to_tSI(self.time, total_mass)
 
         single_mode_strains = []
-        for strain in self.strain:
-            singlemode = mM_to_mSI(strain, total_mass, distance)
+        for mode in self.metadata.modes:
+            singlemode = mM_to_mSI(self[mode], total_mass, distance)
 
-            freq = np.gradient(-np.unwrap(np.angle(singlemode)), time)
+            omega = np.gradient(-np.unwrap(np.angle(singlemode)), time)
             arg = np.abs(singlemode)
             phase = np.unwrap(np.angle(singlemode))
 
             # Index of the argwhere needs to be redone
             try:
                 cutoff = int(
-                    np.argwhere(np.isclose(freq, 2 * np.pi * f_lower, atol=0.1))[-2]
+                    np.argwhere(np.isclose(omega, 2 * np.pi * f_lower, atol=0.1))[-2]
                 )
             except:
                 cutoff = 0
