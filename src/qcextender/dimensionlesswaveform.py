@@ -91,6 +91,10 @@ class DimensionlessWaveform(BaseWaveform):
             Waveform: Waveform object with the admitted properties.
         """
         time = tM_to_tSI(self.time, total_mass)
+        metadata = self.metadata.copy()
+        newmetadata = metadata.to_dimensional(
+            f_lower, total_mass, distance, inclination, coa_phase
+        )
 
         single_mode_strains = []
         for mode in self.metadata.modes:
@@ -100,25 +104,22 @@ class DimensionlessWaveform(BaseWaveform):
             arg = np.abs(singlemode)
             phase = np.unwrap(np.angle(singlemode))
 
-            # Index of the argwhere needs to be redone and tested, reasonable now
-            try:
-                fpoints = np.argwhere(np.isclose(omega, 2 * np.pi * f_lower, atol=0.1))
-                cutoff = int(fpoints[len(fpoints) // 2])
-            except:
-                cutoff = 0
+            # Takes longest stretch where wave is above f_lower, assumes wave above f_lower is longer than noise above f_lower
+            indices = np.where(omega > 2 * np.pi * f_lower)[0]
+            if len(indices) == 0:
+                mask = np.array([], dtype=int)
+            else:
+                breaks = np.where(np.diff(indices) != 1)[0] + 1
+                segments = np.split(indices, breaks)
 
-            interpolatedarg = make_interp_spline(time[cutoff:], arg[cutoff:])(
-                time[cutoff:]
-            )
-            interpolatedphase = make_interp_spline(time[cutoff:], phase[cutoff:])(
-                time[cutoff:]
-            )
-            single_mode_strains.append(interpolatedarg * np.exp(1j * interpolatedphase))
+                mask = max(segments, key=len)
+
+            if mask.size == 0:
+                raise ValueError(
+                    "None of the wave remains above f_lower with the chosen parameters."
+                )
+
+            single_mode_strains.append(arg[mask] * np.exp(1j * phase[mask]))
 
         strain = np.vstack(single_mode_strains)
-        metadata = self.metadata.copy()
-        newmetadata = metadata.to_dimensional(
-            f_lower, total_mass, distance, inclination, coa_phase
-        )
-
-        return Waveform(strain, time[cutoff:], newmetadata)
+        return Waveform(strain, time[mask], newmetadata)

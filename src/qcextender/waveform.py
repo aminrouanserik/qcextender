@@ -167,6 +167,8 @@ class Waveform(BaseWaveform):
         return wfreq
 
     def add_eccentricity(self, func, modes=[(2, 2)], **kwargs):
+        strain = []
         for mode in modes:
-            phase, amplitude = func(self, mode, **kwargs)
-            self[mode] = amplitude * np.exp(1j * phase)
+            time, phase, amplitude = func(self, mode, **kwargs)
+            strain.append(amplitude * np.exp(1j * phase))
+        return BaseWaveform(np.vstack(strain), time, 0)
