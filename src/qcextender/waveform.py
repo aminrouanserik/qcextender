@@ -6,8 +6,8 @@ from pycbc.types import timeseries as ts
 from pycbc.filter.matchedfilter import match as cbcmatch
 from qcextender.metadata import Metadata
 from qcextender.basewaveform import BaseWaveform
-from qcextender.models import lal_modes
-from qcextender.utils import spherical_harmonics
+from qcextender.models import lal_mode
+from qcextender.functions import spherical_harmonics
 
 
 class Waveform(BaseWaveform):
@@ -56,7 +56,7 @@ class Waveform(BaseWaveform):
         single_mode_strain = []
         if approximant in ["IMRPhenomD", "SEOBNRv4"]:
             for mode in modes:
-                time, strain = lal_modes(
+                time, strain = lal_mode(
                     approximant,
                     kwargs["mass1"],
                     kwargs["mass2"],

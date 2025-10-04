@@ -18,9 +18,9 @@ Example:
 import numpy as np
 from numbers import Number
 
-MTSUN_SI = 4.925490947641267e-06
-PC_SI = 3.085677581491367e16
-C_SI = 299792458.0
+MTSUN_SI: float = 4.925490947641267e-06
+PC_SI: float = 3.085677581491367e16
+C_SI: float = 299792458.0
 
 
 def tM_to_tSI(time: np.ndarray | Number, total_mass: Number) -> np.ndarray:

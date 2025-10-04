@@ -1,6 +1,7 @@
 import numpy as np
 from dataclasses import fields
 from qcextender.metadata import Metadata
+from qcextender.functions import amp, phase, omega
 
 
 class BaseWaveform:
@@ -19,24 +20,6 @@ class BaseWaveform:
         self.strain = strain
         self.time = time
         self.metadata = metadata
-
-    def __setitem__(self, mode: tuple[int, int], value: np.ndarray) -> None:
-        modes = list(map(tuple, self.metadata["modes"]))
-        if not len(value) == len(self.time):
-            raise ValueError(
-                f"Time axis of length {len(self.time)} does not equal that of given array {len(value)}."
-            )
-
-        try:
-            index = modes.index((mode[0], abs(mode[1])))
-        except ValueError:
-            raise ValueError(f"Mode {mode} not found in this waveform.")
-
-        if mode[1] < 0:
-            # Enforce the spin-weighted spherical harmonic symmetry automatically
-            self.strain[index] = (-1) ** mode[0] * np.conj(value)
-        else:
-            self.strain[index] = value
 
     def __getitem__(self, mode: tuple[int, int]) -> np.ndarray:
         """Returns the single mode wave strain.
@@ -115,7 +98,7 @@ class BaseWaveform:
         Returns:
             np.ndarray: The amplitude of the mode.
         """
-        return np.abs(self[mode])
+        return amp(self[mode])
 
     def phase(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
         """Returns the phase for a single mode.
@@ -126,7 +109,7 @@ class BaseWaveform:
         Returns:
             np.ndarray: The phase of the mode.
         """
-        return np.unwrap(np.angle(self[mode]))
+        return phase(self[mode])
 
     def omega(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
         """Returns the omega for a single mode.
@@ -137,4 +120,4 @@ class BaseWaveform:
         Returns:
             np.ndarray: The omega of the mode.
         """
-        return np.gradient(-np.unwrap(np.angle(self[mode])), self.time)
+        return omega(self[mode], self.time)

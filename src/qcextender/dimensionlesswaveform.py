@@ -6,7 +6,6 @@ from qcextender.metadata import Metadata
 from qcextender.waveform import Waveform
 from qcextender.basewaveform import BaseWaveform
 from qcextender.units import tM_to_tSI, mM_to_mSI
-from scipy.interpolate import make_interp_spline
 
 
 class DimensionlessWaveform(BaseWaveform):
