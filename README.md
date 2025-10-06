@@ -1,42 +1,52 @@
-## qcextender
+# qcextender
 
-A Python package for extending and unifying gravitational waveform generation 
-(PyCBC, SEOBNR, SXS, etc.) with consistent metadata, conversions between dimensionless and 
-dimensioned representations, and standardized match calculations.
+**qcextender** is a Python package for extending and unifying gravitational waveform generation across libraries such as PyCBC, lalsimulation, and SXS.  
+It provides a shared interface for handling metadata, performing unit conversions between dimensionless and physical (SI) representations, and managing consistent waveform transformations and match calculations.
 
-### Development Roadmap
-Below is the current development status (as of v0.1.1):
-1. **Seperate Metadata**
-    - [x] New Metadata file
-    - [x] Avoid printing None features
-    - [x] Dimensionless vs. dimensioned split on creation
-    - [x] Change print order in __repr__()
-    - [x] Conversion
-1. **Split Waveform objects**
-    - [x] BaseWaveform containing all common features, time-series
-    - [x] SXS waveform, dimensionless, time-series
-    - [x] Waveform, dimensioned, time-series
-1. **Convert to Waveform**
-    - [x] Add a feature turning SXS Waveforms into Waveforms when specifying mass, distance, etc.
-    - [x] Shift amplitude ***and*** frequency (Currently shifting/cutting based on the phase (not a bad idea but needs correction))
-1. **Adjust match calculation**
-    - [x] Correct SXS delta_t
-    - [x] Resize to single delta_t
-    - [x] Calculate full waveform first
-1. **Add eccentricity to Waveform**
-    - [x] Returns waveform with changed eccentricity
-1. **Clean up**
-    *Refactor*
-        - [x] Move (single-line) helper functions to utils (or units.py)
-    *Docs*
-        - [x] Add comments where necessary
-        - [x] Adjust docstrings, add longer explanations next to single-line summaries
-        - [ ] mkdocs full documentation
+The goal is to make it straightforward to load, compare, and analyze waveforms from different sources under a consistent, physically meaningful framework.
 
-**Known Issues**
-    - [ ] Change model and manually decompose into modes
-    - [ ] Minor Metadata rework 
-    - [ ] Clean SXS waveforms
-    - [ ] Fix f_ref of other waveforms to SXS metadata
-    - [ ] Check required keys, keyerror is vague
-    - [ ] Tailored match caluclations
+---
+
+## Installation
+
+### Using [uv](https://docs.astral.sh/uv/)
+
+```bash
+uv pip install git+https://github.com/<your-username>/qcextender.git
+```
+
+## Quick Example
+
+```python
+import matplotlib.pyplot as plt
+from qcextender.waveform import Waveform
+from qcextender.dimensionlesswaveform import DimensionlessWaveform
+
+mass1 = mass2 = 25
+distance = 10
+f_lower = 20
+inclination, coa_phase = 0, 0
+kwargs = {
+    "mass1": 25,
+    "mass2": 25,
+    "inclination": inclination,
+    "coa_phase": coa_phase,
+    "delta_t": 1.0 / 4096,
+    "f_lower": 20,
+    "f_ref": 25,
+    "distance": distance,
+}
+
+phenom = Waveform.from_model("IMRPhenomD", [(2, 2)], **kwargs)
+
+sim = DimensionlessWaveform.from_sim("SXS:BBH:1155")
+sim10sm = sim.to_Waveform(f_lower, mass1 + mass2, distance, inclination, coa_phase)
+
+plt.plot(phenom.time, phenom[2, 2], label="IMRPhenomD")
+plt.plot(sim10sm.time, sim10sm[2, 2], label="SXS:BBH:1155")
+plt.xlabel("Time (s)")
+plt.ylabel("Strain (m)")
+plt.legend()
+plt.show()
+
+```
