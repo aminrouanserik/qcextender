@@ -18,7 +18,7 @@ Example:
 """
 
 import numpy as np
-from typing import Iterable, Sequence, Self
+from typing import Self
 from pycbc.psd import aLIGOZeroDetHighPower
 from pycbc.types import timeseries as ts
 from pycbc.filter.matchedfilter import match as cbcmatch
@@ -30,10 +30,8 @@ from qcextender.models import lal_mode
 class Waveform(BaseWaveform):
     """Class representing multi-modal time-domain gravitational waveforms.
 
-    The :class:`Waveform` class extends :class:`BaseWaveform` and provides
-    utilities for generation, manipulation, and comparison of gravitational
-    waveforms. Each waveform may consist of multiple spin-weighted
-    spherical-harmonic modes.
+    The :class:`Waveform` class extends :class:`BaseWaveform` and provides utilities for generation, manipulation, and comparison of gravitational
+    waveforms. Each waveform may consist of multiple spin-weighted spherical-harmonic modes.
 
     Attributes:
         strain (np.ndarray): Stacked complex strain data for each mode.
@@ -67,6 +65,9 @@ class Waveform(BaseWaveform):
             modes (list[tuple[int, int]], optional): List of (l, m) mode indices to include. Defaults to ``[(2, 2)]``.
             **kwargs: Additional parameters required by the model, such as ``mass1``, ``mass2``, ``spin1``, ``spin2``, ``distance``, ``coa_phase``,
             ``delta_t``, ``f_lower``, and ``f_ref``.
+
+        Raises:
+            ValueError: If a requested approximant is not made available.
 
         Returns:
             Waveform: The generated waveform object containing the stacked strain data.

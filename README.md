@@ -5,7 +5,7 @@ A Python package for extending and unifying gravitational waveform generation
 dimensioned representations, and standardized match calculations.
 
 ### Development Roadmap
-Below is the current development status (as of v0.1.10):
+Below is the current development status (as of v0.1.1):
 1. **Seperate Metadata**
     - [x] New Metadata file
     - [x] Avoid printing None features
@@ -27,19 +27,16 @@ Below is the current development status (as of v0.1.10):
     - [x] Returns waveform with changed eccentricity
 1. **Clean up**
     *Refactor*
-        - [ ] Move (single-line) helper functions to utils (or units.py)
-        - [ ] Adjust Metadata class (add lock, f_ref and check conversion from DimensionlessWaveform -> Waveform)
+        - [x] Move (single-line) helper functions to utils (or units.py)
     *Docs*
-        - [ ] Add comments where necessary
-        - [ ] Adjust docstrings, add longer explanations next to single-line summaries
+        - [x] Add comments where necessary
+        - [x] Adjust docstrings, add longer explanations next to single-line summaries
         - [ ] mkdocs full documentation
 
 **Known Issues**
     - [ ] Change model and manually decompose into modes
+    - [ ] Minor Metadata rework 
     - [ ] Clean SXS waveforms
     - [ ] Fix f_ref of other waveforms to SXS metadata
     - [ ] Check required keys, keyerror is vague
     - [ ] Tailored match caluclations
-
-**Open Questions**
-    - Do I always calculate real and imaginary components differently and then recombine?

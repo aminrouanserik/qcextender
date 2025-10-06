@@ -1,6 +1,24 @@
+"""Module for loading, storing, and converting dimensionless gravitational waveforms.
+
+This module provides the `DimensionlessWaveform` class, which wraps waveforms
+from numerical relativity simulations (e.g., the SXS catalog). It stores
+dimensionless time-domain data with associated metadata and allows conversion
+to dimensional waveforms in SI units.
+
+Conversions are handled using utility functions from `qcextender.units`, and
+metadata is managed using the `Metadata` class. Dimensionless waveforms can be
+converted to `Waveform` objects for direct use in physical analyses and model
+comparisons.
+
+Example:
+    >>> from qcextender.dimensionlesswaveform import DimensionlessWaveform
+    >>> dwf = DimensionlessWaveform.from_sim("SXS:BBH:1155")
+    >>> wf = dwf.to_Waveform(f_lower=20, total_mass=60, distance=400)
+"""
+
 import sxs
 import numpy as np
-from typing import Iterable, Sequence, Self
+from typing import Self
 from numbers import Number
 from qcextender.metadata import Metadata
 from qcextender.waveform import Waveform
@@ -9,33 +27,42 @@ from qcextender.units import tM_to_tSI, mM_to_mSI
 
 
 class DimensionlessWaveform(BaseWaveform):
-    """Dimensionless waveform class which can be converted to a standard Waveform class, stores multiple modes, time, and simulation metadata."""
+    """Represents a dimensionless gravitational waveform from an NR simulation.
+
+    The waveform contains multiple spherical harmonic modes and associated simulation metadata. It can be converted into a dimensional
+    `Waveform` object using the `to_Waveform` method.
+
+    Attributes:
+        strain (np.ndarray): Stacked complex strain data for each mode.
+        time (np.ndarray): Time array corresponding to the waveform.
+        metadata (Metadata): Object storing waveform parameters and provenance.
+    """
 
     def __init__(
         self, strain: np.ndarray, time: np.ndarray, metadata: Metadata
     ) -> None:
-        """Initializes class containing waveform data.
+        """Initialize a dimensionless waveform.
 
         Args:
-            strain (np.ndarray): Stacked array of multi-modal wave strains.
-            time (np.ndarray): Time array, should be the same length as component strain arrays.
-            metadata (dict): Metadata belonging to the generated or requested waveform.
+            strain (np.ndarray): Stacked array of complex strain modes.
+            time (np.ndarray): Time array (dimensionless units), same length as strain arrays.
+            metadata (Metadata): Simulation metadata describing the waveform.
         """
         super().__init__(strain, time, metadata)
 
     @classmethod
-    def from_sim(cls, sim_id: str, modes: Iterable[Sequence[int]] = [(2, 2)]) -> Self:
-        """Loads multi-modal data from a specified SXS simulation.
+    def from_sim(cls, sim_id: str, modes: list[tuple[int, int]] = [(2, 2)]) -> Self:
+        """Load a dimensionless waveform from an SXS simulation.
 
         Args:
-            name (str): Name of the simulation as in the SXS catalogue.
-            modes (Iterable[Sequence[int]]): Modes to be included.
+            sim_id (str): Simulation identifier in the SXS catalog (e.g., "SXS:BBH:1155").
+            modes (list[tuple[int, int]]): List of (l, m) modes to include. Defaults to [(2, 2)].
 
         Raises:
-            ValueError: A specified mode in modes is not available.
+            ValueError: If a requested mode is not available in the simulation.
 
         Returns:
-            Self: Object with stacked modes as complex array.
+            DimensionlessWaveform: Waveform object containing the requested modes.
         """
         sim = sxs.load(sim_id, extrapolation="Outer")
         meta = sim.metadata
@@ -77,17 +104,23 @@ class DimensionlessWaveform(BaseWaveform):
         inclination: Number = 0,
         coa_phase: Number = 0,
     ) -> Waveform:
-        """Creates a copy of any dimensionless waveform and casts to a regular waveform with the specified parameters.
+        """Convert the dimensionless waveform to a dimensional `Waveform`.
+
+        The conversion scales time and strain using physical parameters such as total mass and distance. The resulting waveform is cropped to the longest
+        continuous segment where the orbital frequency exceeds `f_lower`.
 
         Args:
-            f_lower (Number): Lower frequency bound of the signal.
-            total_mass (Number): Total mass of the binary in solar mass.
-            distance (Number): Distance to the merger in Mpc.
-            inclination (Number, optional): Inclination angle of the inspiral. Defaults to 0.
-            coa_phase (Number, optional): Coalescence phase. Defaults to 0.
+            f_lower (Number): Lower frequency bound of the signal [Hz].
+            total_mass (Number): Total mass of the binary [solar masses].
+            distance (Number): Luminosity distance to the source [megaparsecs].
+            inclination (Number, optional): Inclination angle of the system [radians]. Defaults to 0.
+            coa_phase (Number, optional): Coalescence phase [radians]. Defaults to 0.
+
+        Raises:
+            ValueError: If no part of the waveform remains above `f_lower`.
 
         Returns:
-            Waveform: Waveform object with the admitted properties.
+            Waveform: Dimensional waveform object with physical units.
         """
         time = tM_to_tSI(self.time, total_mass)
         metadata = self.metadata.copy()
