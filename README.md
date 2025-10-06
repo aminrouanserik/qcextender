@@ -5,7 +5,7 @@ A Python package for extending and unifying gravitational waveform generation
 dimensioned representations, and standardized match calculations.
 
 ### Development Roadmap
-Below is the current development status (as of v0.1.9):
+Below is the current development status (as of v0.1.10):
 1. **Seperate Metadata**
     - [x] New Metadata file
     - [x] Avoid printing None features
@@ -34,13 +34,12 @@ Below is the current development status (as of v0.1.9):
         - [ ] Adjust docstrings, add longer explanations next to single-line summaries
         - [ ] mkdocs full documentation
 
-**Issues**
+**Known Issues**
+    - [ ] Change model and manually decompose into modes
     - [ ] Clean SXS waveforms
     - [ ] Fix f_ref of other waveforms to SXS metadata
-    - [ ] Investigate why (3, 3) mode returns None for IMRPhenomD
     - [ ] Check required keys, keyerror is vague
+    - [ ] Tailored match caluclations
 
 **Open Questions**
-    - Decide whether to calculate the complex match since the real does not exactly equal the imaginary match.
-    - Identify what needs to change in Metadata for modes instead of polarizations
     - Do I always calculate real and imaginary components differently and then recombine?

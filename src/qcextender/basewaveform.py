@@ -1,7 +1,8 @@
 import numpy as np
+from scipy.interpolate import make_interp_spline
 from dataclasses import fields
 from qcextender.metadata import Metadata
-from qcextender.functions import amp, phase, omega
+from qcextender.functions import spherical_harmonics, amp, phase, omega
 
 
 class BaseWaveform:
@@ -88,6 +89,25 @@ class BaseWaveform:
                     fixed_kwargs[k] = v
 
         return Metadata(**fixed_kwargs)
+
+    def recombine_strain(self, time: np.ndarray = None) -> np.ndarray:
+        strain = 0
+        for mode in self.metadata.modes:
+            if time is not None:
+                single_mode = make_interp_spline(self.time, self[mode])(time)
+                single_minus_mode = make_interp_spline(
+                    self.time, self[mode[0], -mode[1]]
+                )(time)
+            else:
+                single_mode = self[mode]
+                single_minus_mode = self[mode[0], -mode[1]]
+
+            strain += single_mode * spherical_harmonics(
+                mode[0], mode[1], self.metadata.inclination, self.metadata.coa_phase
+            ) + single_minus_mode * spherical_harmonics(
+                mode[0], -mode[1], self.metadata.inclination, self.metadata.coa_phase
+            )
+        return strain
 
     def amp(self, mode: tuple[int, int] = [2, 2]) -> np.ndarray:
         """Returns the amplitude of the mode strain.

@@ -25,8 +25,6 @@ Example:
 
 import numpy as np
 import lalsimulation as ls
-from typing import Tuple
-
 
 PC_SI: float = 3.085677581491367e16
 MSUN_SI: float = 1.9884098706980507e30
@@ -43,8 +41,8 @@ def lal_mode(
     delta_t: float,
     f_lower: float,
     f_ref: float,
-    mode: Tuple[int, int],
-) -> Tuple[np.ndarray, np.ndarray]:
+    mode: tuple[int, int],
+) -> tuple[np.ndarray, np.ndarray]:
     """Generate a single gravitational-wave mode using LALSimulation. Wraps
     `      lalsimulation.SimInspiralTDModesFromPolarizations`.
 
@@ -71,7 +69,7 @@ def lal_mode(
     mean_per_ano = 0.0
     lal_pars = None
 
-    generateTD = ls.SimInspiralTDModesFromPolarizations(
+    generateTD = ls.SimInspiralTDModesFromPolarizations(  # ls.SimInspiralTD
         mass1 * MSUN_SI,
         mass2 * MSUN_SI,
         spin1[0],
