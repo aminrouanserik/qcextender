@@ -22,26 +22,29 @@ import matplotlib.pyplot as plt
 from qcextender.waveform import Waveform
 from qcextender.dimensionlesswaveform import DimensionlessWaveform
 
+# Waveform parameters
 mass1 = mass2 = 25
 distance = 10
 f_lower = 20
 inclination, coa_phase = 0, 0
 kwargs = {
-    "mass1": 25,
-    "mass2": 25,
+    "mass1": mass1,
+    "mass2": mass2,
     "inclination": inclination,
     "coa_phase": coa_phase,
     "delta_t": 1.0 / 4096,
-    "f_lower": 20,
+    "f_lower": f_lower,
     "f_ref": 25,
     "distance": distance,
 }
 
 phenom = Waveform.from_model("IMRPhenomD", [(2, 2)], **kwargs)
 
+# Load simulation and scale to SI units
 sim = DimensionlessWaveform.from_sim("SXS:BBH:1155")
 sim10sm = sim.to_Waveform(f_lower, mass1 + mass2, distance, inclination, coa_phase)
 
+# Plot strain
 plt.plot(phenom.time, phenom[2, 2], label="IMRPhenomD")
 plt.plot(sim10sm.time, sim10sm[2, 2], label="SXS:BBH:1155")
 plt.xlabel("Time (s)")
