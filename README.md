@@ -12,7 +12,7 @@ The goal is to make it straightforward to load, compare, and analyze waveforms f
 ### Using [uv](https://docs.astral.sh/uv/)
 
 ```bash
-uv pip install git+https://github.com/<your-username>/qcextender.git
+uv pip install git+https://github.com/aminrouanserik/qcextender.git
 ```
 
 ## Quick Example
