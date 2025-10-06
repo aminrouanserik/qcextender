@@ -1,77 +1,76 @@
-from typing import Iterable, Sequence, Self, Optional
-from numbers import Number
+"""Waveform module for quasicircular and extended gravitational-wave models.
+
+This module defines the :class:`Waveform` class, the primary interface for
+loading, generating, manipulating, and comparing gravitational waveforms
+in the time domain.
+
+The class extends :class:`BaseWaveform` and supports:
+    - Generation of multi-modal waveforms from LALSimulation models.
+    - Recombination of spin-weighted spherical-harmonic modes.
+    - Match calculations between two waveforms using PyCBC.
+    - Conversion to frequency domain.
+    - Eccentricity extensions.
+
+Example:
+    >>> wf = Waveform.from_model("IMRPhenomD", mass1=30, mass2=25, ...)
+    >>> wf2 = Waveform.from_model("SEOBNRv4", mass1=30, mass2=25, ...)
+    >>> wf.match(wf2)
+"""
+
 import numpy as np
-from pycbc.waveform import get_td_waveform, waveform_modes
+from typing import Self
+from pycbc.psd import aLIGOZeroDetHighPower
 from pycbc.types import timeseries as ts
 from pycbc.filter.matchedfilter import match as cbcmatch
-from pycbc.psd import aLIGOZeroDetHighPower
-import sxs
-import lal
-from dataclasses import dataclass, field, fields, asdict
+from qcextender.metadata import Metadata
+from qcextender.basewaveform import BaseWaveform
+from qcextender.models import lal_mode
 
 
-@dataclass
-class Metadata:
+class Waveform(BaseWaveform):
+    """Class representing multi-modal time-domain gravitational waveforms.
 
-    library: str
-    q: float
+    The :class:`Waveform` class extends :class:`BaseWaveform` and provides utilities for generation, manipulation, and comparison of gravitational
+    waveforms. Each waveform may consist of multiple spin-weighted spherical-harmonic modes.
 
-    approximant: Optional[str] = None
-    simulation_id: Optional[str] = None
-
-    total_mass: Optional[float] = None
-    spin1: tuple[float, float, float] = (0, 0, 0)
-    spin2: tuple[float, float, float] = (0, 0, 0)
-    eccentricity: float = 0
-    distance: Optional[float] = None
-    inclination: float = 0
-    coa_phase: float = 0
-
-    delta_t: Optional[float] = 1.0 / 4096
-    f_lower: float = 20
-    # f_final: Optional[float] = None
-
-    modes: Iterable[tuple[int, int]] = field(default_factory=list)
-    domain: str = "time"
-    dimensionless: bool = True
-    aligned_to_peak: bool = True
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def to_dict(self):
-        return asdict(self)
-
-
-class Waveform:
-    """Base waveform class with which all calculations can be done, stores multi-modal (time domain) waveforms."""
+    Attributes:
+        strain (np.ndarray): Stacked complex strain data for each mode.
+        time (np.ndarray): Time array corresponding to the waveform.
+        metadata (Metadata): Object storing waveform parameters and provenance.
+    """
 
     def __init__(
         self, strain: np.ndarray, time: np.ndarray, metadata: Metadata
     ) -> None:
-        """Initializes class containing waveform data.
+        """Initializes a waveform object with given strain, time, and metadata.
 
         Args:
-            strain (np.ndarray): Stacked array of multi-modal wave strains.
-            time (np.ndarray): Time array, should be the same length as component strain arrays.
-            metadata (dict): Metadata belonging to the generated or requested waveform.
+            strain (np.ndarray): Stacked array of mode strains, one per (l, m) mode.
+            time (np.ndarray): Time array of uniform spacing.
+            metadata (Metadata): Metadata containing waveform parameters.
         """
-        self.strain = strain
-        self.time = time
-        self.metadata = metadata
+        super().__init__(strain, time, metadata)
 
     @classmethod
     def from_model(
-        cls, approximant: str, modes: Iterable[Sequence[int]], **kwargs
+        cls, approximant: str, modes: list[tuple[int, int]] = [(2, 2)], **kwargs
     ) -> Self:
-        """Generates a multi-modal time-domain waveform from a specified model using PyCBC.
+        """Generates a time-domain waveform from a given approximant.
+
+        Uses LALSimulation models (via :func:`lal_mode`) to generate specified
+        modes and combines them into a multi-modal waveform.
 
         Args:
-            approximant: PyCBC included waveform model.
-            modes: Modes to include, each as a (l, m) pair.
+            approximant (str): LALSimulation waveform approximant name (e.g. "IMRPhenomD").
+            modes (list[tuple[int, int]], optional): List of (l, m) mode indices to include. Defaults to ``[(2, 2)]``.
+            **kwargs: Additional parameters required by the model, such as ``mass1``, ``mass2``, ``spin1``, ``spin2``, ``distance``, ``coa_phase``,
+            ``delta_t``, ``f_lower``, and ``f_ref``.
+
+        Raises:
+            ValueError: If a requested approximant is not made available.
 
         Returns:
-            Waveform: Object with stacked modes as complex array.
+            Waveform: The generated waveform object containing the stacked strain data.
         """
         total_mass = kwargs["mass1"] + kwargs["mass2"]
 
@@ -80,27 +79,38 @@ class Waveform:
             q = 1 / q
 
         kwargs.update(
-            library="PyCBC",
+            library="lalsimulation",
             q=q,
             approximant=approximant,
             modes=list(modes),
+            total_mass=total_mass,
         )
+        metadata = cls._kwargs_to_metadata(kwargs)
 
         single_mode_strain = []
-        for mode in modes:
-            local_kwargs = kwargs.copy()
-            local_kwargs["mode_array"] = mode
-            hp, hc = get_td_waveform(**local_kwargs)
-            single_mode_strain.append(np.asarray(hp - 1j * hc))
+        if approximant in ["IMRPhenomD", "SEOBNRv4"]:
+            for mode in modes:
+                time, strain = lal_mode(
+                    approximant,
+                    kwargs["mass1"],
+                    kwargs["mass2"],
+                    metadata["spin1"],
+                    metadata["spin2"],
+                    metadata["distance"],
+                    metadata["coa_phase"],
+                    metadata["delta_t"],
+                    metadata["f_lower"],
+                    kwargs["f_ref"],
+                    mode,
+                )
+            single_mode_strain.append(strain)
+        else:
+            raise ValueError(
+                f"{approximant} not explicitly supported, please add support."
+            )
 
-        multi_mode_strain = cls._dimensionless_strain(
-            np.vstack(single_mode_strain),
-            total_mass,
-            kwargs["distance"],
-        )
-        kwargs["distance"] = None
-        time = cls._dimensionless_time(hp.sample_times, total_mass)
-        metadata = cls._kwargs_to_metadata(kwargs)
+        multi_mode_strain = np.vstack(single_mode_strain)
+        time = cls._align(single_mode_strain[0], time)
 
         return cls(
             multi_mode_strain,
@@ -108,192 +118,85 @@ class Waveform:
             metadata,
         )
 
-    @classmethod
-    def from_sim(cls, sim_id: str, modes: Iterable[Sequence[int]]) -> Self:
-        """Loads multi-modal data from a specified SXS simulation.
-
-        Args:
-            name (str): Name of the simulation as in the SXS catalogue.
-            modes (Iterable[Sequence[int]]): Modes to be included.
-
-        Raises:
-            ValueError: A specified mode in modes is not available.
-
-        Returns:
-            Self: Object with stacked modes as complex array.
-        """
-        sim = sxs.load(sim_id, extrapolation="Outer")
-        meta = sim.metadata
-        meta["modes"] = modes
-
-        q = meta["initial_mass1"] / meta["initial_mass2"]
-        if q < 1:
-            q = 1 / q
-
-        meta.update(
-            library="SXS",
-            simulation_id=sim_id,
-            q=q,
-            modes=list(modes),
-        )
-
-        single_mode_strain = []
-        for l, m in modes:
-            try:
-                single_mode_strain.append(
-                    np.array(sim.h[:, sim.h.index(l, m)])
-                    * cls._spherical_harmonic(
-                        l, m, 0, np.pi / 2
-                    )  # Shifted to make visual comparisons easier
-                )
-            except:
-                raise ValueError(f"Mode (l={l}, m={m}) not found in this simulation.")
-
-        time = cls._align(np.array(sim.h[:, sim.h.index(l, m)]), sim.h.t)
-        multi_mode_strain = np.vstack(single_mode_strain)
-        metadata = cls._kwargs_to_metadata(meta)
-        return cls(multi_mode_strain, time, metadata)
-
-    @staticmethod
-    def _dimensionless_strain(
-        strain: np.ndarray, mass: Number, distance: Number
-    ) -> np.ndarray:
-        """Converts the strain into a dimensionless strain.
-
-        Args:
-            strain (np.ndarray): N-dimensional array containing dimensioned strains.
-            mass (Number): Total mass in solar masses
-            distance (Number): Distance in Mpc.
-
-        Returns:
-            np.ndarray: Dimensionless wave strain.
-        """
-        distance *= 1e6 * lal.PC_SI
-        correction = mass * lal.MTSUN_SI * lal.C_SI / distance
-        return strain / correction
-
-    @staticmethod
-    def _dimensionless_time(time: np.ndarray, mass: Number) -> np.ndarray:
-        """Converts time from units of seconds to geometric units.
-
-        Args:
-            time (np.ndarray): Time in seconds.
-            mass (Number): Mass in solar masses.
-
-        Returns:
-            np.ndarray: New time in geometric units.
-        """
-        return time / (lal.MTSUN_SI * mass)
-
-    @staticmethod
-    def _align(strain: np.ndarray, time: np.ndarray) -> np.ndarray:
-        """Aligns waveform such that the dominant order peak is at t=0.
-
-        Args:
-            strain (np.ndarray): Waveform strain data.
-            time (np.ndarray): Time array prior to realigning.
-
-        Returns:
-            np.ndarray: New time array.
-        """
-        time -= time[np.argmax(np.abs(strain))]
-        return time
-
-    @staticmethod
-    def _spherical_harmonic(l: Number, m: Number, iota: Number, phi: Number) -> Number:
-        """Calculates the spin-weighted spherical harmonics for any mode.
-
-        Args:
-            l (Number): Spherical harmonic degree.
-            m (Number): Spherical harmonic order.
-            iota (Number): The inclination in radians.
-            phi (Number): The coalescence phase.
-
-        Returns:
-            Number: The spin-weighted spherical harmonics at specified order.
-        """
-        return waveform_modes.get_glm(l, m, iota) * np.exp(1j * m * phi)
-
-    @staticmethod
-    def _kwargs_to_metadata(kwargs: dict[str, type]) -> "Metadata":
-        """Converts SXS metadata or user supplied kwargs into a uniform Metadata object. Will be split for SXS and PyCBC later.
-
-        Args:
-            kwargs (dict[str, type]): Keyword arguments used to generate waveform or SXS simulation metadata.
-
-        Returns:
-            Metadata: Unified object encoding all important metadata.
-        """
-        meta_fields = {f.name for f in fields(Metadata)}
-
-        kwargs["total_mass"] = None
-        kwargs["distance"] = None
-
-        aliases = {
-            "reference_dimensionless_spin1": "spin1",
-            "reference_dimensionless_spin2": "spin2",
-            "reference_eccentricity": "eccentricity",
-        }
-
-        fixed_kwargs = {}
-        for k, v in kwargs.items():
-            k = aliases.get(k, k)
-            if k in meta_fields:
-                if k in ("spin1", "spin2") and v is not None:
-                    fixed_kwargs[k] = tuple(v)  # normalize to tuple
-                else:
-                    fixed_kwargs[k] = v
-
-        return Metadata(**fixed_kwargs)
-
-    def __getitem__(self, mode: tuple[int, int]) -> np.ndarray:
-        """Returns the single mode wave strain.
-
-        Args:
-            mode (tuple[int, int]): Spherical harmonics decomposed strain mode.
-
-        Raises:
-            ValueError: This Waveform object does not contain the requested mode.
-
-        Returns:
-            np.ndarray: Single mode wave strain.
-        """
-
-        modes = self.metadata["modes"]
-        try:
-            index = modes.index((mode[0], mode[1]))
-        except ValueError:
-            raise ValueError(f"Mode {mode} not found in this waveform.")
-        return self.strain[index]
-
     def match(
         self,
         waveform: Self,
         f_lower: float | None = None,
         psd: str = "aLIGOZeroDetHighPower",
     ) -> float:
-        """Calculates the match between self and one other waveform. Note, only the real parts are used.
+        """Computes the normalized overlap (match) between two waveforms.
+
+        The match quantifies similarity between two real-valued time-domain waveforms, taking into account their noise-weighted inner product
+        under a given power spectral density (PSD).
 
         Args:
-            waveform (Self): A waveform to match with.
-            f_lower (float | None, optional): Lower cut-off for the match. Defaults to None, which then takes the highest of the two waveforms from the metadata.
-            psd (str, optional): The PSD to use in the match. Defaults to "aLIGOZeroDetHighPower".
+            waveform (Self): Second waveform to compare with ``self``.
+            f_lower (float | None, optional): Low-frequency cutoff for the match. Defaults to ``None``, which uses the higher of both waveforms' ``f_lower``.
+            psd (str, optional): PSD name. Currently only PyCBC PSD names are supported. Defaults to ``"aLIGOZeroDetHighPower"``.
 
         Returns:
-            float: The real match of the two waveforms.
+            float: The computed match value between 0 and 1.
         """
+        delta_t = max(self.metadata.delta_t, waveform.metadata.delta_t)
+        wf1_time = np.arange(self.time[0], self.time[-1], delta_t)
+        wf2_time = np.arange(waveform.time[0], waveform.time[-1], delta_t)
 
-        wf1 = ts.TimeSeries(self[2, 2].real, delta_t=self.metadata.delta_t)
-        wf2 = ts.TimeSeries(waveform[2, 2].real, delta_t=waveform.metadata.delta_t)
+        wf1_strain = self.recombine_strain(wf1_time)
+        wf2_strain = waveform.recombine_strain(wf2_time)
+
+        wf1 = ts.TimeSeries(wf1_strain.real, delta_t=delta_t)
+        wf2 = ts.TimeSeries(wf2_strain.real, delta_t=delta_t)
 
         if f_lower is None:
             f_lower = max(self.metadata.f_lower, waveform.metadata.f_lower)
 
         flen = 1 << (max(len(wf1), len(wf2)) - 1).bit_length()
-        delta_f = 1.0 / (flen * wf1.delta_t)
+        delta_f = 1.0 / (flen * delta_t)
 
         psd = aLIGOZeroDetHighPower(flen, delta_f, f_lower)
         wf1.resize(flen)
         wf2.resize(flen)
 
         return cbcmatch(wf1, wf2, psd=psd, low_frequency_cutoff=f_lower)[0]
+
+    def freq(self) -> np.ndarray:
+        """Converts the waveform to the frequency domain.
+
+        Returns:
+            FrequencySeries: PyCBC's built-in frequency-domain representation (complex frequency series).
+        """
+        delta_t = self.metadata.delta_t
+        wf = ts.TimeSeries(self.recombine_strain().real, delta_t=delta_t)
+
+        wfreq = wf.to_frequencyseries()
+        return wfreq
+
+    def add_eccentricity(
+        self,
+        func: callable,
+        eccentricity: float,
+        modes: list[tuple[int, int]] = [(2, 2)],
+        **kwargs,
+    ):
+        """Applies an eccentricity correction to the waveform.
+
+        The correction function is user-supplied and returns time, phase, and amplitude. The waveform strain is reconstructed from these components.
+
+        Args:
+            func (callable): Function that takes the waveform and mode, returning ``(time, phase, amplitude)``.
+            eccentricity (float): Eccentricity value to assign to the new waveform.
+            modes (list[tuple[int, int]], optional): Modes to modify. Defaults to ``[(2, 2)]``.
+            **kwargs: Additional parameters for the supplied function.
+
+        Returns:
+            Waveform: New waveform instance with updated eccentricity and modes.
+        """
+        strain = []
+        for mode in modes:
+            time, phase, amplitude = func(self, mode, **kwargs)
+            strain.append(amplitude * np.exp(1j * phase))
+
+        metadata = self.metadata.copy()
+        metadata.modes = modes
+        metadata.eccentricity = eccentricity
+        return Waveform(np.vstack(strain), time, metadata)
