@@ -1,0 +1,28 @@
+site_name: qcextender
+repo_url: https://github.com/aminrouanserik/qcextender
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  # - Usage: usage.md
+  - API Reference:
+      - Waveform Base: api/basewaveform.md
+      - Waveform: api/waveform.md
+      - Dimensionless Waveform: api/dimensionlesswaveform.md
+      - Metadata: api/metadata.md
+      - Models: api/models.md
+      - Units: api/units.md
+      - Functions: api/functions.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
