@@ -24,7 +24,8 @@ from pycbc.types import timeseries as ts
 from pycbc.filter.matchedfilter import match as cbcmatch
 from qcextender.metadata import Metadata
 from qcextender.basewaveform import BaseWaveform
-from qcextender.models import lal_mode
+from qcextender.models import lal_polarizations
+from qcextender.functions import spherical_harmonics
 
 
 class Waveform(BaseWaveform):
@@ -62,7 +63,7 @@ class Waveform(BaseWaveform):
 
         Args:
             approximant (str): LALSimulation waveform approximant name (e.g. "IMRPhenomD").
-            modes (list[tuple[int, int]], optional): List of (l, m) mode indices to include. Defaults to ``[(2, 2)]``.
+            modes (list[tuple[int, int]], optional): List of (l, m) mode indices to include. Currently fixed to ``[(2, 2)]``.
             **kwargs: Additional parameters required by the model, such as ``mass1``, ``mass2``, ``spin1``, ``spin2``, ``distance``, ``coa_phase``,
             ``delta_t``, ``f_lower``, and ``f_ref``.
 
@@ -82,35 +83,39 @@ class Waveform(BaseWaveform):
             library="lalsimulation",
             q=q,
             approximant=approximant,
-            modes=list(modes),
+            modes=[(2, 2)],
             total_mass=total_mass,
         )
         metadata = cls._kwargs_to_metadata(kwargs)
 
-        single_mode_strain = []
+        strain = []
         if approximant in ["IMRPhenomD", "SEOBNRv4"]:
-            for mode in modes:
-                time, strain = lal_mode(
-                    approximant,
-                    kwargs["mass1"],
-                    kwargs["mass2"],
-                    metadata["spin1"],
-                    metadata["spin2"],
-                    metadata["distance"],
-                    metadata["coa_phase"],
-                    metadata["delta_t"],
-                    metadata["f_lower"],
-                    kwargs["f_ref"],
-                    mode,
+            hp, hc, time = lal_polarizations(
+                approximant,
+                kwargs["mass1"],
+                kwargs["mass2"],
+                metadata["spin1"],
+                metadata["spin2"],
+                metadata["distance"],
+                metadata["inclination"],
+                metadata["coa_phase"],
+                metadata["delta_t"],
+                metadata["f_lower"],
+                kwargs["f_ref"],
+            )
+            strain.append(
+                (hp - 1j * hc)
+                / spherical_harmonics(
+                    2, 2, metadata["inclination"], metadata["coa_phase"]
                 )
-            single_mode_strain.append(strain)
+            )
         else:
             raise ValueError(
                 f"{approximant} not explicitly supported, please add support."
             )
 
-        multi_mode_strain = np.vstack(single_mode_strain)
-        time = cls._align(single_mode_strain[0], time)
+        multi_mode_strain = np.vstack(strain)
+        time = cls._align(strain[0], time)
 
         return cls(
             multi_mode_strain,
