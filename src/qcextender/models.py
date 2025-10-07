@@ -43,7 +43,7 @@ def lal_mode(
     f_ref: float,
     mode: tuple[int, int],
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Generate a single gravitational-wave mode using LALSimulation. Wraps
+    """Generate a single gravitational wave mode using LALSimulation. Wraps
     `      lalsimulation.SimInspiralTDModesFromPolarizations`.
 
         Args:
@@ -110,26 +110,25 @@ def lal_polarizations(
     f_lower: float,
     f_ref: float,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Generate a single gravitational-wave mode using LALSimulation. Wraps
-    `      lalsimulation.SimInspiralTDModesFromPolarizations`.
+    """Generate a gravitational wave strain using LALSimulation. Wraps `lalsimulation.SimInspiralTD`.
 
-        Args:
-            approximant (str): Name of the LALSimulation approximant (e.g. "IMRPhenomD").
-            mass1 (float): Primary mass [solar masses].
-            mass2 (float): Secondary mass [solar masses].
-            spin1 (array-like): Dimensionless spin vector (S1x, S1y, S1z).
-            spin2 (array-like): Dimensionless spin vector (S2x, S2y, S2z).
-            distance (float): Luminosity distance to source [megaparsecs].
-            coa_phase (float): Coalescence phase [radians].
-            delta_t (float): Sampling interval [seconds].
-            f_lower (float): Lower frequency cutoff [Hz].
-            f_ref (float): Reference frequency [Hz].
-            mode (tuple[int, int]): Mode (l, m) to extract.
+    Args:
+        approximant (str): Name of the LALSimulation approximant (e.g. "IMRPhenomD").
+        mass1 (float): Primary mass [solar masses].
+        mass2 (float): Secondary mass [solar masses].
+        spin1 (array-like): Dimensionless spin vector (S1x, S1y, S1z).
+        spin2 (array-like): Dimensionless spin vector (S2x, S2y, S2z).
+        distance (float): Luminosity distance to source [megaparsecs].
+        coa_phase (float): Coalescence phase [radians].
+        delta_t (float): Sampling interval [seconds].
+        f_lower (float): Lower frequency cutoff [Hz].
+        f_ref (float): Reference frequency [Hz].
+        mode (tuple[int, int]): Mode (l, m) to extract.
 
-        Returns:
-            tuple[np.ndarray, np.ndarray]:
-                - time (np.ndarray): Time samples [seconds].
-                - h (np.ndarray): Complex strain for the specified mode.
+    Returns:
+        tuple[np.ndarray, np.ndarray]:
+            - time (np.ndarray): Time samples [seconds].
+            - h (np.ndarray): Complex strain for the specified mode.
     """
     long_asc_nodes = 0.0
     eccentricity = 0.0
