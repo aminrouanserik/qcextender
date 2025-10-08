@@ -1,5 +1,10 @@
+# DimensionlessWaveform will NOT be tested here anymore
+# Once test routine is thought out, might include pytest
+
+import numpy as np
 import matplotlib.pyplot as plt
 from qcextender.waveform import Waveform
+
 from qcextender.dimensionlesswaveform import DimensionlessWaveform
 
 kwargs = {
@@ -9,7 +14,7 @@ kwargs = {
     "coa_phase": 0,
     "delta_t": 1.0 / 4096,
     "f_lower": 20,
-    "f_ref": 25,  # Change to be specific to waveform model used, want to do that in the generation.
+    "f_ref": 25,
     "distance": 10,
 }
 
@@ -20,7 +25,7 @@ kwargsseob = {
     "coa_phase": 0,
     "delta_t": 1.0 / 4096,
     "f_lower": 20,
-    "f_ref": 25,  # Change to be specific to waveform model used, want to do that in the generation.
+    "f_ref": 25,
     "distance": 10,
 }
 
@@ -30,12 +35,12 @@ seob = Waveform.from_model("SEOBNRv4", [(2, 2)], **kwargsseob)
 sim = DimensionlessWaveform.from_sim("SXS:BBH:1155")
 sim10sm = sim.to_Waveform(20, 50, 10, 0, 0)
 
-print(phenom.match(seob))
-print(sim10sm.match(phenom))
+# print(phenom.match(seob))
+# print(sim10sm.match(phenom))
 # print(phenom.metadata)
 # print(seob.metadata)
 # print(sim.metadata)
-print(sim10sm.metadata)
+# print(sim10sm.metadata)
 
 phenomfreq = phenom.freq()
 seobfreq = seob.freq()

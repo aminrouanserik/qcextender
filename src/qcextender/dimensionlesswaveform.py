@@ -24,6 +24,7 @@ from qcextender.metadata import Metadata
 from qcextender.waveform import Waveform
 from qcextender.basewaveform import BaseWaveform
 from qcextender.units import tM_to_tSI, mM_to_mSI
+from qcextender.functions import frequency_window, amp, phase
 
 
 class DimensionlessWaveform(BaseWaveform):
@@ -132,26 +133,11 @@ class DimensionlessWaveform(BaseWaveform):
         for mode in self.metadata.modes:
             singlemode = mM_to_mSI(self[mode], total_mass, distance)
 
-            omega = np.gradient(-np.unwrap(np.angle(singlemode)), time)
-            arg = np.abs(singlemode)
-            phase = np.unwrap(np.angle(singlemode))
+            strain, time = frequency_window(singlemode, time, f_lower)
 
-            # Takes longest stretch where wave is above f_lower, assumes wave above f_lower is longer than noise above f_lower
-            indices = np.where(omega > 2 * np.pi * f_lower)[0]
-            if len(indices) == 0:
-                mask = np.array([], dtype=int)
-            else:
-                breaks = np.where(np.diff(indices) != 1)[0] + 1
-                segments = np.split(indices, breaks)
-
-                mask = max(segments, key=len)
-
-            if mask.size == 0:
-                raise ValueError(
-                    "None of the wave remains above f_lower with the chosen parameters."
-                )
-
-            single_mode_strains.append(arg[mask] * np.exp(1j * phase[mask]))
+            phases, amps = phase(strain), amp(strain)
+            phases -= phases[np.argmax(amps)]
+            single_mode_strains.append(amps * np.exp(1j * phases))
 
         strain = np.vstack(single_mode_strains)
-        return Waveform(strain, time[mask], newmetadata)
+        return Waveform(strain, time, newmetadata)

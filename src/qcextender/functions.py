@@ -91,3 +91,33 @@ def spherical_harmonics(
         )
 
     return prefactor * np.exp(1j * m * phi) * alternating_sum
+
+
+def frequency_window(
+    strain: np.ndarray, time: np.ndarray, f_lower: float
+) -> np.ndarray:
+    """Creates a rudimentary frequency window with no fancy tapering (assuming model already took care of that)."""
+    omegas = omega(strain, time)
+    amps = amp(strain)
+    phases = phase(strain)
+
+    # Takes longest stretch where wave is above f_lower, assumes wave above f_lower is longer than noise above f_lower
+    indices = np.where(omegas > 2 * np.pi * f_lower)[0]
+    if len(indices) == 0:
+        mask = np.array([], dtype=int)
+    else:
+        breaks = np.where(np.diff(indices) != 1)[0] + 1
+        segments = np.split(indices, breaks)
+
+        mask = max(segments, key=len)
+
+    if mask.size == 0:
+        raise ValueError(
+            "None of the wave remains above f_lower with the chosen parameters."
+        )
+
+    # phases -= phases[0]
+
+    # print(phases)
+
+    return amps[mask] * np.exp(1j * phases[mask]), time[mask]

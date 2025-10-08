@@ -4,6 +4,7 @@
     options:
       members:
         - spherical_harmonics
+        - frequency_window
         - amp
         - phase
         - omega

@@ -1,3 +1,5 @@
+# Not a test file, rather a set-up file (change?)
+
 import sxs
 
 print(sxs.sxs_directory("config"))  # Probably returns some path in your home directory
