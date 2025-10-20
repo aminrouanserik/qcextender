@@ -73,8 +73,11 @@ class DimensionlessWaveform(BaseWaveform):
         if q < 1:
             q = 1 / q
 
+        reference_time = meta.reference_time
+        reference_index = sim.h.index_closest_to(reference_time)
+
         dt = np.min(np.diff(sim.h.t))
-        sim = sim.h.interpolate(np.arange(sim.h.t[0], sim.h.t[-1], dt))
+        sim = sim.h.interpolate(np.arange(sim.h.t[reference_index], sim.h.t[-1], dt))
 
         meta.update(
             library="SXS",
