@@ -12,31 +12,21 @@ kwargs = {
     "mass2": 25,
     "inclination": 0,
     "coa_phase": 0,
-    "delta_t": 1.0 / 4096,
-    "f_lower": 20,
-    "f_ref": 25,
-    "distance": 10,
-}
-
-kwargsseob = {
-    "mass1": 25,
-    "mass2": 25,
-    "inclination": 0,
-    "coa_phase": 0,
-    "delta_t": 1.0 / 4096,
+    "delta_t": 1.0 / 16300,
     "f_lower": 20,
     "f_ref": 25,
     "distance": 10,
 }
 
 phenom = Waveform.from_model("IMRPhenomD", [(2, 2)], **kwargs)
-seob = Waveform.from_model("SEOBNRv4", [(2, 2)], **kwargsseob)
+seob = Waveform.from_model("SEOBNRv4", [(2, 2)], **kwargs)
 
 sim = DimensionlessWaveform.from_sim("SXS:BBH:1155")
 sim10sm = sim.to_Waveform(20, 50, 10, 0, 0)
 
 # print(phenom.match(seob))
 # print(sim10sm.match(phenom))
+
 # print(phenom.metadata)
 # print(seob.metadata)
 # print(sim.metadata)
@@ -77,3 +67,13 @@ plt.xlabel("Time (s)")
 plt.ylabel("Strain (m)")
 plt.legend()
 plt.show()
+
+# Turn into test cases
+print(phenom.time[np.argmax(phenom.amp())] == 0)
+print(seob.time[np.argmax(seob.amp())] == 0)
+print(sim10sm.time[np.argmax(sim10sm.amp())] == 0)
+
+# This or close to 0
+print(np.isclose(phenom.phase()[np.argmax(phenom.amp())] % np.pi, np.pi))
+print(np.isclose(seob.phase()[np.argmax(seob.amp())] % np.pi, np.pi))
+print(np.isclose(sim10sm.phase()[np.argmax(sim10sm.amp())] % np.pi, np.pi))

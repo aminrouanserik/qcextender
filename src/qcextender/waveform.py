@@ -134,6 +134,7 @@ class Waveform(BaseWaveform):
         self,
         waveform: Self,
         f_lower: float | None = None,
+        f_max: float | None = None,
         psd: str = "aLIGOZeroDetHighPower",
     ) -> float:
         """Computes the normalized overlap (match) between two waveforms.
@@ -144,6 +145,7 @@ class Waveform(BaseWaveform):
         Args:
             waveform (Self): Second waveform to compare with ``self``.
             f_lower (float | None, optional): Low-frequency cutoff for the match. Defaults to ``None``, which uses the higher of both waveforms' ``f_lower``.
+            f_max (float | None, optional): High-frequency cutoff for the match. Defaults to ``None``.
             psd (str, optional): PSD name. Currently only PyCBC PSD names are supported. Defaults to ``"aLIGOZeroDetHighPower"``.
 
         Returns:
@@ -169,7 +171,9 @@ class Waveform(BaseWaveform):
         wf1.resize(flen)
         wf2.resize(flen)
 
-        return cbcmatch(wf1, wf2, psd=psd, low_frequency_cutoff=f_lower)[0]
+        return cbcmatch(
+            wf1, wf2, psd=psd, low_frequency_cutoff=f_lower, high_frequency_cutoff=f_max
+        )[0]
 
     def freq(self) -> np.ndarray:
         """Converts the waveform to the frequency domain.
@@ -178,7 +182,7 @@ class Waveform(BaseWaveform):
             FrequencySeries: PyCBC's built-in frequency-domain representation (complex frequency series).
         """
         delta_t = self.metadata.delta_t
-        wf = ts.TimeSeries(self.recombine_strain().imag, delta_t=delta_t)
+        wf = ts.TimeSeries(self.recombine_strain().real, delta_t=delta_t)
 
         wfreq = wf.to_frequencyseries()
         return wfreq
@@ -186,9 +190,9 @@ class Waveform(BaseWaveform):
     def add_eccentricity(
         self,
         func: callable,
+        kwargs: dict,
         eccentricity: float,
         modes: list[tuple[int, int]] = [(2, 2)],
-        **kwargs,
     ):
         """Applies an eccentricity correction to the waveform.
 
@@ -196,9 +200,9 @@ class Waveform(BaseWaveform):
 
         Args:
             func (callable): Function that takes the waveform and mode, returning ``(time, phase, amplitude)``.
+            kwargs (dict): Keyword arguments to be passed on to the supplied function.
             eccentricity (float): Eccentricity value to assign to the new waveform.
             modes (list[tuple[int, int]], optional): Modes to modify. Defaults to ``[(2, 2)]``.
-            **kwargs: Additional parameters for the supplied function.
 
         Returns:
             Waveform: New waveform instance with updated eccentricity and modes.
