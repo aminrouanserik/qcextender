@@ -24,7 +24,7 @@ from pycbc.types import timeseries as ts
 from pycbc.filter.matchedfilter import match as cbcmatch
 from qcextender.metadata import Metadata
 from qcextender.basewaveform import BaseWaveform
-from qcextender.models import lal_polarizations
+from qcextender.models import lal_waveform
 from qcextender.functions import spherical_harmonics, frequency_window, phase, amp
 
 
@@ -89,37 +89,19 @@ class Waveform(BaseWaveform):
         metadata = cls._kwargs_to_metadata(kwargs)
 
         strain = []
-        if approximant in ["IMRPhenomD", "SEOBNRv4"]:
-            hp, hc, time = lal_polarizations(
-                approximant,
-                kwargs["mass1"],
-                kwargs["mass2"],
-                metadata["spin1"],
-                metadata["spin2"],
-                metadata["distance"],
-                metadata["inclination"],
-                metadata["coa_phase"],
-                metadata["delta_t"],
-                metadata["f_lower"],
-                kwargs["f_ref"],
-            )
-            mode, time = frequency_window(
-                (hp - 1j * hc)
-                / spherical_harmonics(
-                    2, 2, metadata["inclination"], metadata["coa_phase"]
-                ),
-                time,
-                metadata["f_lower"],
-            )
 
-            # Make sure there is no phase difference at the merger (t=0)
-            phases, amps = phase(mode), amp(mode)
-            phases -= phases[np.argmax(amps)]
-            strain.append(amps * np.exp(1j * phases))
-        else:
-            raise ValueError(
-                f"{approximant} not explicitly supported, please add support."
-            )
+        hp, hc, time = lal_waveform(**kwargs)
+        mode, time = frequency_window(
+            (hp - 1j * hc)
+            / spherical_harmonics(2, 2, metadata["inclination"], metadata["coa_phase"]),
+            time,
+            metadata["f_lower"],
+        )
+
+        # Make sure there is no phase difference at the merger (t=0)
+        phases, amps = phase(mode), amp(mode)
+        phases -= phases[np.argmax(amps)]
+        strain.append(amps * np.exp(1j * phases))
 
         multi_mode_strain = np.vstack(strain)
         time = cls._align(strain[0], time)
