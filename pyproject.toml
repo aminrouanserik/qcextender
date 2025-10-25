@@ -1,6 +1,6 @@
 [project]
 name = "qcextender"
-version = "0.2.4"
+version = "0.3.1"
 description = "This package aims to extend any quasi-circular waveform with complex features."
 readme = "README.md"
 authors = [

@@ -108,7 +108,6 @@ def lal_waveform(
             elif isinstance(val, int):
                 lal.DictInsertINT4Value(params, key, val)
 
-    print(kwargs)
     hp, hc = ls.SimInspiralTD(
         kwargs["mass1"] * MSUN_SI,
         kwargs["mass2"] * MSUN_SI,
