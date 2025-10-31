@@ -24,7 +24,8 @@ from pycbc.types import timeseries as ts
 from pycbc.filter.matchedfilter import match as cbcmatch
 from qcextender.metadata import Metadata
 from qcextender.basewaveform import BaseWaveform
-from qcextender.models import lal_mode
+from qcextender.models import lal_waveform
+from qcextender.functions import spherical_harmonics, frequency_window, phase, amp
 
 
 class Waveform(BaseWaveform):
@@ -62,7 +63,7 @@ class Waveform(BaseWaveform):
 
         Args:
             approximant (str): LALSimulation waveform approximant name (e.g. "IMRPhenomD").
-            modes (list[tuple[int, int]], optional): List of (l, m) mode indices to include. Defaults to ``[(2, 2)]``.
+            modes (list[tuple[int, int]], optional): List of (l, m) mode indices to include. Currently fixed to ``[(2, 2)]``.
             **kwargs: Additional parameters required by the model, such as ``mass1``, ``mass2``, ``spin1``, ``spin2``, ``distance``, ``coa_phase``,
             ``delta_t``, ``f_lower``, and ``f_ref``.
 
@@ -82,35 +83,28 @@ class Waveform(BaseWaveform):
             library="lalsimulation",
             q=q,
             approximant=approximant,
-            modes=list(modes),
+            modes=[(2, 2)],
             total_mass=total_mass,
         )
         metadata = cls._kwargs_to_metadata(kwargs)
 
-        single_mode_strain = []
-        if approximant in ["IMRPhenomD", "SEOBNRv4"]:
-            for mode in modes:
-                time, strain = lal_mode(
-                    approximant,
-                    kwargs["mass1"],
-                    kwargs["mass2"],
-                    metadata["spin1"],
-                    metadata["spin2"],
-                    metadata["distance"],
-                    metadata["coa_phase"],
-                    metadata["delta_t"],
-                    metadata["f_lower"],
-                    kwargs["f_ref"],
-                    mode,
-                )
-            single_mode_strain.append(strain)
-        else:
-            raise ValueError(
-                f"{approximant} not explicitly supported, please add support."
-            )
+        strain = []
 
-        multi_mode_strain = np.vstack(single_mode_strain)
-        time = cls._align(single_mode_strain[0], time)
+        hp, hc, time = lal_waveform(**kwargs)
+        mode, time = frequency_window(
+            (hp - 1j * hc)
+            / spherical_harmonics(2, 2, metadata["inclination"], metadata["coa_phase"]),
+            time,
+            metadata["f_lower"],
+        )
+
+        # Make sure there is no phase difference at the merger (t=0)
+        phases, amps = phase(mode), amp(mode)
+        phases -= phases[np.argmax(amps)]
+        strain.append(amps * np.exp(1j * phases))
+
+        multi_mode_strain = np.vstack(strain)
+        time = cls._align(strain[0], time)
 
         return cls(
             multi_mode_strain,
@@ -122,6 +116,7 @@ class Waveform(BaseWaveform):
         self,
         waveform: Self,
         f_lower: float | None = None,
+        f_max: float | None = None,
         psd: str = "aLIGOZeroDetHighPower",
     ) -> float:
         """Computes the normalized overlap (match) between two waveforms.
@@ -132,6 +127,7 @@ class Waveform(BaseWaveform):
         Args:
             waveform (Self): Second waveform to compare with ``self``.
             f_lower (float | None, optional): Low-frequency cutoff for the match. Defaults to ``None``, which uses the higher of both waveforms' ``f_lower``.
+            f_max (float | None, optional): High-frequency cutoff for the match. Defaults to ``None``.
             psd (str, optional): PSD name. Currently only PyCBC PSD names are supported. Defaults to ``"aLIGOZeroDetHighPower"``.
 
         Returns:
@@ -157,7 +153,9 @@ class Waveform(BaseWaveform):
         wf1.resize(flen)
         wf2.resize(flen)
 
-        return cbcmatch(wf1, wf2, psd=psd, low_frequency_cutoff=f_lower)[0]
+        return cbcmatch(
+            wf1, wf2, psd=psd, low_frequency_cutoff=f_lower, high_frequency_cutoff=f_max
+        )[0]
 
     def freq(self) -> np.ndarray:
         """Converts the waveform to the frequency domain.
@@ -174,9 +172,9 @@ class Waveform(BaseWaveform):
     def add_eccentricity(
         self,
         func: callable,
+        kwargs: dict,
         eccentricity: float,
         modes: list[tuple[int, int]] = [(2, 2)],
-        **kwargs,
     ):
         """Applies an eccentricity correction to the waveform.
 
@@ -184,9 +182,9 @@ class Waveform(BaseWaveform):
 
         Args:
             func (callable): Function that takes the waveform and mode, returning ``(time, phase, amplitude)``.
+            kwargs (dict): Keyword arguments to be passed on to the supplied function.
             eccentricity (float): Eccentricity value to assign to the new waveform.
             modes (list[tuple[int, int]], optional): Modes to modify. Defaults to ``[(2, 2)]``.
-            **kwargs: Additional parameters for the supplied function.
 
         Returns:
             Waveform: New waveform instance with updated eccentricity and modes.

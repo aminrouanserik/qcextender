@@ -78,7 +78,7 @@ class BaseWaveform:
         Returns:
             np.ndarray: New time array aligned to the maximum amplitude.
         """
-        time -= time[np.argmax(np.abs(strain))] + time[0]
+        time -= time[np.argmax(np.abs(strain))]
         return time
 
     @staticmethod

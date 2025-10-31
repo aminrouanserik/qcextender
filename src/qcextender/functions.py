@@ -91,3 +91,49 @@ def spherical_harmonics(
         )
 
     return prefactor * np.exp(1j * m * phi) * alternating_sum
+
+
+def frequency_window(
+    strain: np.ndarray, time: np.ndarray, f_lower: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """Extracts the longest continuous segment of the waveform where the instantaneous frequency exceeds a given lower bound.
+
+    This function identifies the region of the strain signal where the angular frequency is greater than ``2π * f_lower``,
+    under the assumption that the  true waveform remains above this threshold longer than any noise component.
+    It then reconstructs the complex strain using the amplitude and unwrapped phase corresponding to that region.
+
+    Args:
+        strain (np.ndarray): Complex strain time series.
+        time (np.ndarray): Time array corresponding to the strain samples.
+        f_lower (float): Lower frequency cutoff in Hz. Portions of the signal below this threshold are discarded.
+
+    Raises:
+        ValueError: If no portion of the waveform remains above ``f_lower`` for the given parameters.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]:
+            filtered_strain : np.ndarray
+                Complex strain restricted to the longest contiguous segment where frequency > f_lower.
+            filtered_time : np.ndarray
+                Time array corresponding to the filtered strain segment.
+    """
+    omegas = omega(strain, time)
+    amps = amp(strain)
+    phases = phase(strain)
+
+    # Takes longest stretch where wave is above f_lower, assumes wave above f_lower is longer than noise above f_lower
+    indices = np.where(omegas > 2 * np.pi * f_lower)[0]
+    if len(indices) == 0:
+        mask = np.array([], dtype=int)
+    else:
+        breaks = np.where(np.diff(indices) != 1)[0] + 1
+        segments = np.split(indices, breaks)
+
+        mask = max(segments, key=len)
+
+    if mask.size == 0:
+        raise ValueError(
+            "None of the wave remains above f_lower with the chosen parameters."
+        )
+
+    return amps[mask] * np.exp(1j * phases[mask]), time[mask]
